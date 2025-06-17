@@ -5,8 +5,8 @@
 	JTAG=/dev/cu.usbserial-2516330596481
 	
 ifeq ($(windows), 1)
-	KICK=./KickAss65CE02-5.24f.jar
-	C1541=d:/PCTOOLS/c1541.exe
+	KICK=./build/KickAss65CE02-5.24f.jar
+	C1541=./build/c1541/c1541.exe
 	XEMU=h:/xemu/xmega65.exe
 	MEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	EMEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
@@ -15,7 +15,7 @@ ifeq ($(windows), 1)
 	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
 	MEGATOOL=./build/megatool/megatool.exe
 else
-	KICK=~/Applications/KickAss/KickAss65CE02-5.24f.jar
+	KICK=./build/KickAss65CE02-5.24f.jar
 	C1541=/opt/homebrew/Cellar/vice/3.8/bin/c1541
 	XEMU=/Applications/Xemu/xmega65.app/Contents/MacOS/xmega65
 	MEGA65_FTP=~/Applications/Mega65/mega65_ftp.osx
