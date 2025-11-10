@@ -375,6 +375,34 @@ start:
 	sta dst+2
 }
 
+// _and24im - and a 24bit constant with a memory location, store in result
+.macro _and24im(src, value, dst)
+{
+	lda src+0
+	and #<value
+	sta dst+0
+	lda src+1
+	and #>value
+	sta dst+1
+	lda src+2
+	and #[value >> 16]
+	sta dst+2
+}
+
+// _and24 - and a 24bit value with a memory location, store in result
+.macro _and24(src, value, dst)
+{
+	lda src+0
+	and value+0
+	sta dst+0
+	lda src+1
+	and value+1
+	sta dst+1
+	lda src+2
+	and value+2
+	sta dst+2
+}
+
 .macro _half24(srcdst)
 {
 	lda srcdst+2
@@ -427,6 +455,24 @@ start:
 	sta dst+2
 	lda src+3
 	adc #[value >> 24]
+	sta dst+3
+}
+
+// _add32 - add a 32bit value to a memory location, store in result
+.macro _add32(src, value, dst)
+{
+	clc
+	lda src+0
+	adc value
+	sta dst+0
+	lda src+1
+	adc value+1
+	sta dst+1
+	lda src+2
+	adc value+2
+	sta dst+2
+	lda src+3
+	adc value+3
 	sta dst+3
 }
 
@@ -674,7 +720,7 @@ start:
 
 	//byte 04
 	.word Source & $ffff
-	.byte [Source >> 16] + backByte
+	.byte [[Source >> 16] & $0f] + backByte
 
 	//byte 07
 	.word Destination & $ffff

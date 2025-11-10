@@ -7,7 +7,8 @@ DrawPosY:		.byte $00,$00
 DrawBaseChr:    .byte $00,$00
 DrawPal:        .byte $00
 DrawSChr:		.byte $00
-
+DrawMode:		.byte $00
+DrawCharHigh:	.byte $00
 PixieYShift:	.byte $00
 
 // ------------------------------------------------------------
@@ -16,7 +17,8 @@ PixieYShift:	.byte $00
 
 // ------------------------------------------------------------
 //
-ClearWorkPixies: {
+ClearWorkPixies: 
+{
 	.var rowScreenPtr = Tmp		// 16bit
 	.var rowAttribPtr = Tmp+2	// 16bit
 
@@ -49,15 +51,11 @@ ClearWorkPixies: {
 	cpx Layout.NumRows
 	bne !-
 
-	lda Irq.VBlankCount
-	and #$0f
-	sta $d020
-
 	// Clear the working pixie data using DMA
 	RunDMAJob(JobFill)
 
-	lda #$00
-	sta $d020
+	_set8im(8, DrawMode)
+	_set8im(2, DrawCharHigh)
 
 	rts 
 
@@ -89,9 +87,14 @@ DrawPixie:
 	.var yShift = Tmp2+2				// 8bit
 	.var gotoXmask = Tmp2+3				// 8bit
 
+	.var charHigh = Tmp3+0				// 8bit
+
 	phx
 	phy
 	phz
+
+	_set8(DrawCharHigh, charHigh)
+	dec charHigh
 
 	_set16(DrawBaseChr, charIndx)		// Start charIndx with first pixie char
 
@@ -106,14 +109,17 @@ DrawPixie:
 	adc #$00
 	sta charIndx+1
 
-	lda PixieYShift
+	lda PixieYShift					// This game doesn't use vertical scrolling
 	and #$07
 	sta lshift
-	
-	lda DrawPosY
+
+	lda DrawPosY+0
 	clc
 	adc lshift:#$00
-	sta DrawPosY
+	sta DrawPosY+0
+	lda DrawPosY+1
+	adc #0
+	sta DrawPosY+1
 
 	lda DrawPosY+0						// Find sub row y offset (0 - 7)
 	and #$07
@@ -129,11 +135,20 @@ DrawPixie:
     // we use this to index the row tile / attrib ptrs
  	// 
 	lda DrawPosY+0
-	lsr
-	lsr
-	lsr
-	dec									// move up 2 rows to add top clipping
-	dec
+	sta posy
+
+	lda DrawPosY+1
+	cmp #$80
+	ror
+	ror posy+0
+	cmp #$80
+	ror
+	ror posy+0
+	cmp #$80
+	ror
+	ror posy+0
+
+	lda posy:#$00
 	tax									// move yRow into X reg
 	bmi middleRow
 	cpx Layout.NumRows
@@ -185,7 +200,7 @@ DrawPixie:
 	// Char
 	lda charIndx+0
 	sta ((tilePtr)),z
-	lda #$08
+	lda DrawMode
 	sta ((attribPtr)),z
 	inz	
 	lda charIndx+1
@@ -194,6 +209,10 @@ DrawPixie:
 	sta ((attribPtr)),z
 
 middleRow:
+	dec charHigh
+	lda charHigh
+	bmi bottomRow
+
 	// Advance to next row and charIndx
     inw charIndx
 	inx
@@ -247,13 +266,15 @@ middleRow:
 	// Char
 	lda charIndx+0
 	sta ((tilePtr)),z
-	lda #$08
+	lda DrawMode
 	sta ((attribPtr)),z
 	inz	
 	lda charIndx+1
 	sta ((tilePtr)),z
 	lda DrawPal
 	sta ((attribPtr)),z
+
+	bra middleRow
 
 bottomRow:
 	// If we have a yShift of 0 we only need to add to 2 rows, skip the last row!
@@ -319,7 +340,7 @@ bottomRow:
 	// Char
 	lda charIndx+0
 	sta ((tilePtr)),z
-	lda #$08
+	lda DrawMode
 	sta ((attribPtr)),z
 	inz	
 	lda charIndx+1

@@ -3,9 +3,8 @@
 //--------------------------------------------------------
 .namespace Assets
 {
-.segment Code "Assets Code"
+.segment Code "Assets NameList"
 
-//.segment Data "Assets Data"
 Names:
 	.for(var i=0; i<AssetList.size(); i++)
 	{

@@ -229,49 +229,19 @@ UpdateObjData:
 //
 DrawObjData:
 {
-	lda #$00
-	sta DrawPosY+1
-
 	_set16im((sprFont.baseChar), DrawBaseChr)			// Start charIndx with first pixie char
 
 	// Add Objs into the work ram here
 	//
 	ldx #$00
 !:
-	lda Objs1PosYLo,x
-	sta DrawPosY+0
-
 	sec
-	lda Objs1PosXLo,x
-	sbc #$20
-	sta DrawPosX+0
-	lda Objs1PosXHi,x
-	sbc #$00
-	sta DrawPosX+1
-
-	lda Objs1Spr,x
-	sta DrawSChr
-
-	clc
-	lda $d020
-	adc #$01
-	and #$0f
-	sta $d020
-
-	jsr DrawPixie
-
-	inx
-	cpx #NUM_OBJS1
-	bne !-
-
-	// Add Objs into the work ram here
-	//
-	ldx #$00
-!:
-	clc
 	lda Objs1PosYLo,x
-	adc #$10
+	sbc #$10
 	sta DrawPosY+0
+	lda #$00
+	sbc #$00
+	sta DrawPosY+1
 
 	sec
 	lda Objs1PosXLo,x

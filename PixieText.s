@@ -118,6 +118,8 @@ SprPrintMsg: {
 
  	lda TextPosY
  	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
 
  	ldy #$00
 
@@ -146,11 +148,16 @@ oloop:
 	ror
 	adc TextPosY
 	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
+
 	bra _dodraw
 
 _noeffect:
 	lda TextPosY
 	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
 
 _dodraw:
  	jsr DrawPixie

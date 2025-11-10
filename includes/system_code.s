@@ -2,6 +2,19 @@
 //
 .const FlEnableScreen = $01
 
+// byte0
+.const PAD_UP		= $01
+.const PAD_DOWN		= $02
+.const PAD_LEFT		= $04
+.const PAD_RIGHT	= $08
+.const PAD_FIRE		= $10
+.const PAD_F5		= $20
+.const PAD_F7		= $40
+
+// byte1
+.const PAD_ESC		= $01
+.const PAD_YES		= $02
+
 //--------------------------------------------------------
 // System
 //
@@ -14,6 +27,8 @@
 TopBorder:		.word $0000
 BotBorder:		.word $0000
 TextYPos:		.word $0000
+
+IRQTopPos:		.word $0000
 IRQBotPos:		.word $0000
 
 Flags:			.byte $00
@@ -21,8 +36,8 @@ Flags:			.byte $00
 //--------------------------------------------------------
 //
 .segment BSS "System BSS"
-DPad:				.byte $00
-DPadClick:			.byte $00
+DPad:				.word $00
+DPadClick:			.word $00
 
 //--------------------------------------------------------
 //
@@ -139,10 +154,11 @@ CenterFrameHorizontally:
 	tsb $d05d
 
 	// TEXTXPOS - Text X Pos
-	lda charXPos+0
-	sta $d04c
 	lda #%00001111
 	trb $d04d
+
+	lda charXPos+0
+	sta $d04c
 	lda charXPos+1
 	and #%00001111
 	sta $d04d
@@ -212,7 +228,11 @@ isPal:
 	lda TextYPos+1
 	tsb $d04f
 
-	//_add16im(BotBorder, 2, IRQBotPos)
+	_sub16im(TopBorder, 4, IRQTopPos)
+
+	lsr IRQTopPos+1
+	ror IRQTopPos+0
+
 	_add16im(verticalCenter, (MAX_HEIGHT), IRQBotPos)
 
 	lsr IRQBotPos+1
@@ -226,8 +246,10 @@ isPal:
 InitDPad: {
 
 	lda #$00
-	sta DPad
-	sta DPadClick
+	sta DPad+0
+	sta DPad+1
+	sta DPadClick+0
+	sta DPadClick+1
 
 	rts
 }
@@ -236,113 +258,29 @@ UpdateDPad: {
 	// Scan the keyboard
 	jsr ScanKeyMatrix
 
-	lda DPad
-	sta oldDPad
+	lda DPad+0
+	sta oldDPad0
+	lda DPad+1
+	sta oldDPad1
 
 	lda #$00
-	sta DPad
+	sta DPad+0
+	sta DPad+1
 
-	lda #$01
-	bit $dc00
-	bne _not_j2_up
-
-	lda #$01
-	tsb DPad
-	bra _not_up
-
-_not_j2_up:
-
-	lda ScanResult+1
-	and #$04
-	bne _not_up
-
-	lda #$01
-	tsb DPad
-
-_not_up:
-
-	lda #$02
-	bit $dc00
-	bne _not_j2_down
-
-	lda #$02
-	tsb DPad
-	bra _not_down
-
-_not_j2_down:
-
-	lda ScanResult+1
-	and #$10
-	bne _not_down
-
-	lda #$02
-	tsb DPad
-
-_not_down:
-
-	lda #$04
-	bit $dc00
-	bne _not_j2_left
-
-	lda #$04
-	tsb DPad
-	bra _not_left
-
-_not_j2_left:
-
-	lda ScanResult+5
-	and #$80
-	bne _not_left
-
-	lda #$04
-	tsb DPad
-
-_not_left:
-
-	lda #$08
-	bit $dc00
-	bne _not_j2_right
-
-	lda #$08
-	tsb DPad
-	bra _not_right
-
-_not_j2_right:
-
-	lda ScanResult+5
-	and #$10
-	bne _not_right
-
-	lda #$08
-	tsb DPad
-
-_not_right:
-
-	lda #$10
-	bit $dc00
-	bne _not_j2_fire
-
-	lda #$10
-	tsb DPad
-	bra _not_fire
-
-_not_j2_fire:
-
-	lda ScanResult+6
-	and #$80
-	bne _not_fire
-
-	lda #$10
-	tsb DPad
-
-_not_fire:
-
+	jsr CheckForUp
+	jsr CheckForDown
+	jsr CheckForLeft
+	jsr CheckForRight
+	jsr CheckForFire
+	jsr CheckForEsc
+	jsr CheckForYes
+	
 	lda ScanResult+0
 	and #$40
 	bne _not_F5
 
-	lda #$20
-	tsb DPad
+	lda #PAD_F5
+	tsb DPad+0
 
 _not_F5:
 
@@ -350,19 +288,256 @@ _not_F5:
 	and #$08
 	bne _not_F7
 
-	lda #$40
-	tsb DPad
+	lda #PAD_F7
+	tsb DPad+0
 
 _not_F7:
 
-	lda oldDPad:#$00
-	eor DPad
-	and DPad
-	sta DPadClick
+	lda oldDPad0:#$00
+	eor DPad+0
+	and DPad+0
+	sta DPadClick+0
+	lda oldDPad1:#$00
+	eor DPad+1
+	and DPad+1
+	sta DPadClick+1
 	
 	rts
 }
 
+// ------------------------------------------------------------
+CheckForUp:
+{
+	lda #$01
+	bit $dc00
+	bne _not_j2_up
+
+	lda #PAD_UP
+	tsb DPad+0
+	bra _done
+
+_not_j2_up:
+
+	lda ScanResult+1
+	and #$04
+	bne _not_A
+
+	lda #PAD_UP
+	tsb DPad+0
+	bra _done
+
+_not_A:
+
+	lda ScanResult+6			// Up cursor = shift + down
+	and #$10
+	bne _not_up
+
+	lda ScanResult+0
+	and #$80
+	bne _not_up
+
+	lda #PAD_UP
+	tsb DPad+0
+	bra	_done
+
+_not_up:
+
+_done:
+
+	rts
+}
+
+CheckForDown:
+{
+	lda #$02
+	bit $dc00
+	bne _not_j2_down
+
+	lda #PAD_DOWN
+	tsb DPad+0
+	bra _done
+
+_not_j2_down:
+
+	lda ScanResult+1
+	and #$10
+	bne _not_Z
+
+	lda #PAD_DOWN
+	tsb DPad+0
+	bra _done
+
+_not_Z:
+
+	lda ScanResult+6			// Down cursor = NOT shift + down
+	and #$10
+	beq _not_down
+
+	lda ScanResult+0
+	and #$80
+	bne _not_down
+
+	lda #PAD_DOWN
+	tsb DPad+0
+	bra	_done
+
+_not_down:
+
+_done:
+
+	rts
+}
+
+CheckForLeft:
+{
+	lda #$04
+	bit $dc00
+	bne _not_j2_left
+
+	lda #PAD_LEFT
+	tsb DPad+0
+	bra _done
+
+_not_j2_left:
+
+	lda ScanResult+5
+	and #$80
+	bne _not_less
+
+	lda #PAD_LEFT
+	tsb DPad+0
+	bra _done
+
+_not_less:
+
+	lda ScanResult+6			// Right cursor = shift + right
+	and #$10
+	bne _not_left
+
+	lda ScanResult+0
+	and #$04
+	bne _not_left
+
+	lda #PAD_LEFT
+	tsb DPad+0
+	bra	_done
+
+_not_left:
+
+_done:
+
+	rts
+}
+
+CheckForRight:
+{
+	lda #$08
+	bit $dc00
+	bne _not_j2_right
+
+	lda #PAD_RIGHT
+	tsb DPad+0
+	bra _done
+
+_not_j2_right:
+
+	lda ScanResult+5
+	and #$10
+	bne _not_greater
+
+	lda #PAD_RIGHT
+	tsb DPad+0
+	bra	_done
+
+_not_greater:
+
+	lda ScanResult+6			// Right cursor = NOT shift + right
+	and #$10
+	beq _not_right
+
+	lda ScanResult+0
+	and #$04
+	bne _not_right
+
+	lda #PAD_RIGHT
+	tsb DPad+0
+	bra	_done
+
+_not_right:
+
+_done:
+
+	rts
+}
+
+CheckForFire:
+{
+	lda #$10
+	bit $dc00
+	bne _not_j2_fire
+
+	lda #PAD_FIRE
+	tsb DPad+0
+	bra _done
+
+_not_j2_fire:
+
+	lda ScanResult+6
+	and #$80
+	bne _not_slash
+
+	lda #PAD_FIRE
+	tsb DPad+0
+	bra _done
+
+_not_slash:
+
+	lda ScanResult+7
+	and #$10
+	bne _not_space
+
+	lda #PAD_FIRE
+	tsb DPad+0
+	bra _done
+
+_not_space:
+
+_done:
+	rts	
+}
+
+CheckForEsc:
+{
+	lda ScanResult+7
+	and #$80
+	bne _not_RunStop
+
+	lda #PAD_ESC
+	tsb DPad+1
+	bra _done
+
+_not_RunStop:
+
+_done:
+	rts
+}
+
+CheckForYes:
+{
+	lda ScanResult+3
+	and #$02
+	bne _not_Yes
+
+	lda #PAD_YES
+	tsb DPad+1
+	bra _done
+
+_not_Yes:
+
+_done:
+	rts
 }
 
 // ------------------------------------------------------------
+}
+
