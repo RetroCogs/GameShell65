@@ -17,3 +17,4 @@ build/MegaTool/DecrZeroinit.bin
 build/MegaTool/DecrZeroinit.vs
 build/MegaTool/megatool.exe
 includes/.source.txt
+bin/startup.klist

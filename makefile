@@ -44,7 +44,7 @@ datablobs:
 	$(MEGATOOL) -c sdcard/data.bin.addr
 
 code:
-	java -cp $(KICK) kickass.KickAssembler65CE02 -vicesymbols -showmem -odir bin $(APPNAME).asm
+	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -odir bin $(APPNAME).asm –symbolfile -bytedumpfile $(APPNAME).klist
 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
 	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
 
