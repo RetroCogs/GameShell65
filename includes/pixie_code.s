@@ -1,5 +1,11 @@
 // ------------------------------------------------------------
 //
+.enum 
+{
+	PIXIE_16x8,
+	PIXIE_16x16
+}
+
 .segment Zeropage "Pixie ZP"
 
 DrawPosX:		.byte $00,$00
@@ -8,7 +14,6 @@ DrawBaseChr:    .byte $00,$00
 DrawPal:        .byte $00
 DrawSChr:		.byte $00
 DrawMode:		.byte $00
-DrawCharHigh:	.byte $00
 PixieYShift:	.byte $00
 
 // ------------------------------------------------------------
@@ -55,7 +60,6 @@ ClearWorkPixies:
 	RunDMAJob(JobFill)
 
 	_set8im(8, DrawMode)
-	_set8im(2, DrawCharHigh)
 
 	rts 
 
@@ -78,6 +82,8 @@ JobFill:
 yShiftTable:	.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)|$10,(6<<5)|$10,(7<<5)|$10
 yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
 
+pixieLayoutH:	.byte 1,2
+
 DrawPixie:
 {
 	.var tilePtr = Tmp					// 32bit
@@ -93,8 +99,9 @@ DrawPixie:
 	phy
 	phz
 
-	_set8(DrawCharHigh, charHigh)
-	dec charHigh
+	lda pixieLayoutH,x
+	dec
+	sta charHigh
 
 	_set16(DrawBaseChr, charIndx)		// Start charIndx with first pixie char
 

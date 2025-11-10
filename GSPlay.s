@@ -235,6 +235,8 @@ DrawObjData:
 	//
 	ldx #$00
 !:
+	phx
+	
 	sec
 	lda Objs1PosYLo,x
 	sbc #$10
@@ -260,8 +262,10 @@ DrawObjData:
 	and #$0f
 	sta $d020
 
+	ldx #PIXIE_16x16
 	jsr DrawPixie
 
+	plx
 	inx
 	cpx #NUM_OBJS1
 	bne !-

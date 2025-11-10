@@ -159,6 +159,7 @@ gsDrwTitles:
 	// _set16im(16, DrawPosY)
 	// _set16im(sprFont.baseChar, DrawBaseChr)
 	// _set8im(2, DrawSChr)
+	// ldx #PIXIE_16x16
 	// jsr DrawPixie
 	// rts
 
