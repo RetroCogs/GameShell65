@@ -1,4 +1,7 @@
 // -----------------------------------------------------------------------------------------------
+// original code from MirageBD https://github.com/MirageBD
+//
+// -----------------------------------------------------------------------------------------------
 
 .const dc_base		= $02
 .const dc_bits		= dc_base
@@ -13,18 +16,14 @@
 				lda #>(decraddr)
 				sta dc_ldst+1
 				sta dc_mdst+1
-				lda #[decraddr >> 16]
+				lda #[decraddr >> 16] & $0f
 				sta dc_ldst+2
 				sta dc_mdst+2
-				lda #[decraddr >> 24]
-				asl
-				asl
-				asl
-				asl
+				lda #[decraddr >> 20]
 				sta dc_lsrcm+1
-				sta dc_msrcm+1
+				sta dc_msrcm+1			// Bank
 				sta dc_ldstm+1
-				sta dc_mdstm+1
+				sta dc_mdstm+1			// Bank
 
 				jsr decrunch_skiptrailing
 				jsr decrunch
@@ -161,12 +160,19 @@ dloop:			jsr getnextbit									// after this, carry is 0, bits = 01010101
 				jsr getlen										// Literal run.. get length. after this, carry = 0, bits = 10101010, A = 1
 				sta dc_llen
 				tay												// put length into y for addput
-
+				
+				lda $d020
+				clc
+				adc #$01
+				and #$0f
+				sta $d020
+				
 				lda dc_get_zp+0
 				sta dc_lsrc+0
 				lda dc_get_zp+1
 				sta dc_lsrc+1
 				lda dc_get_zp+2
+				and #$0f
 				sta dc_lsrc+2
 
 				sta $d707										// inline DMA copy
@@ -261,7 +267,10 @@ dc_cmdh:		.byte $00										// cmd hi
 				// beq dc_end
 				jmp dloop
 
-dc_end:			rts
+dc_end:
+	lda #$00
+	sta $d020
+	rts
 
 // -----------------------------------------------------------------------------------------------
 

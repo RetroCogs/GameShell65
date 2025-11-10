@@ -81,17 +81,23 @@ function setOutputPath(pathName) {
 
 
 
-function getFCMData(png, palette) {
+function getFCMData(png, width, height, palette) {
+
+    let paletteOffset = 0
+
+    if (argv.poffs)
+        paletteOffset = parseInt(argv.poffs, 10)
+
     let data = []
-    for(var y=0; y<png.height; y+=8) 
+    for(var y=0; y<height; y+=8) 
     {
-        for(var x=0; x<png.width; x+=8) 
+        for(var x=0; x<width; x+=8) 
         {
             for(var r=0; r<8; r++) 
             {
                 for(var c=0; c<8; c++) 
                 {
-                    let i = ((y + r) * (png.width * 4) + ((x + c) * 4))
+                    let i = ((y + r) * (width * 4) + ((x + c) * 4))
 
                     //find the color
                     let col = palette.findIndex(a => {
@@ -104,9 +110,8 @@ function getFCMData(png, palette) {
                     })
 
                     if (col != 0)
-                    {
-                        col = col + 192
-                    }
+                        col += paletteOffset
+
                     data.push(col)
                 }
             }
@@ -261,8 +266,8 @@ function getNCMData(png, palette, wid, hei) {
     let charColors = []
     let originalPalIndex = []
 
-    console.log("blahblah")
-    console.log(palette)
+    // console.log("blahblah")
+    // console.log(palette)
     
     for(var y=0; y<png.height; y+=(8 * hei)) {
         for(var x=0; x<png.width; x+=(16 * wid)) {
@@ -327,6 +332,82 @@ function getNCMData(png, palette, wid, hei) {
 
     return { data, charColors, originalPalIndex }
 }
+
+function getFCMDataForSprites(png, palette, wid, hei) {
+    let data = []
+    let charColors = []
+    let originalPalIndex = []
+    let row = (png.width)
+
+    let paletteOffset = 0
+
+    if (argv.poffs)
+        paletteOffset = parseInt(argv.poffs, 10)
+
+    console.log(png)
+
+    // Sprite sheet export 
+    console.log("Exporting " + (png.width / (8 * wid)) + " x " + (png.height / (8 * hei)) + " sprites")
+
+    for(var spry = 0; spry < png.height; spry += (8 * hei))
+    {
+        for(var sprx = 0; sprx < png.width; sprx += (8 * wid)) 
+        {
+            let charCols = [0]
+
+            for(var tx=0; tx<wid; tx++) 
+            {
+                // Add a blank character to top of each column
+                // for(var j=0; j<64;j++) data.push(0)
+
+                for(var ty=0; ty<hei; ty++)
+                {
+                    for(var r=0; r<8; r++) 
+                    {
+                        for(var c=0; c<8; c++) 
+                        {
+                            let i = ( row * (spry + ty * 8 ) + (sprx + tx * 8) + r*row + c)//row * (y + ty * 8 + r) + (x + tx * 16 + c)
+                            i *= 4
+
+                            //find the color
+                            let col = palette.findIndex(a => {
+                                return (
+                                    png.data[i+0] === a.red &&
+                                    png.data[i+1] === a.green &&
+                                    png.data[i+2] === a.blue
+                                );
+                            })
+
+                            originalPalIndex.push(col)
+                            if(charCols.indexOf(col) === -1)  charCols.push(col)  
+
+                            if (col != 0)
+                                col += paletteOffset
+
+                            data.push(col)
+                        }
+                    }
+                }
+            }
+
+//            charCols = charCols.sort((a,b) => a-b)
+            charColors.push(charCols)
+        }
+
+        if (spry == (png.height - (8 * hei)))
+        {
+            // Add a blank character to top of each column
+            // for(var j=0; j<64;j++) data.push(0)
+        }
+    }
+
+    console.log(charColors)
+    // console.log("===================")
+    // console.log(originalPalIndex)
+
+    return { data, charColors, originalPalIndex }
+}
+
 
 
 
@@ -750,22 +831,50 @@ async function runCharMapper(argv) {
     let inputName = path.parse(argv.input).name
 	let png = await getPngData(argv.input)
 
-    if(png.height % 8 !== 0)  throw(new Error(`Your input image's height is not a multiple of 8, it is ${png.height}`))
-    if(png.width % 8 !== 0 && argv.fcm)  throw(new Error(`Your input image's width is not a multiple of 8, it is ${png.width}`))
-    if(png.width % 16 !== 0 && argv.ncm)  throw(new Error(`Your input image's width is not a multiple of 16, it is ${png.width}`))
+    let charsWidth = 0
+    let charsHeight = 0
 
-    console.log(png)
+    // console.log(png)
+    
+    if(!argv.size) {
+        // If explicit size not specified then we require image to be a multiple of 8 high and either 8 or 16 wide depending on FCM/NCM
+        //
+        if(png.height % 8 !== 0)  throw(new Error(`Your input image's height is not a multiple of 8, it is ${png.height}`))
+        if(png.width % 8 !== 0 && argv.fcm)  throw(new Error(`Your input image's width is not a multiple of 8, it is ${png.width}`))
+        if(png.width % 16 !== 0 && argv.ncm)  throw(new Error(`Your input image's width is not a multiple of 16, it is ${png.width}`))
+
+        charsWidth = png.width
+        charsHeight = png.height
+    } else {
+        try {
+            let size = argv.size.split(",")
+            charsWidth = parseInt(size[0], 10)
+            charsHeight = parseInt(size[1], 10)
+
+            if(charsHeight % 8 !== 0)  throw(new Error(`Your sprite height is not a multiple of 8, it is ${charsHeight}`))
+            if(charsWidth % 8 !== 0 && argv.fcm)  throw(new Error(`Your sprite width is not a multiple of 8, it is ${charsWidth}`))
+            if(charsWidth % 16 !== 0 && argv.ncm)  throw(new Error(`Your sprite width is not a multiple of 16, it is ${charsWidth}`))  
+
+        } catch(e) {
+            throw(new Error(`Invalid sprite size parameter. Please use the format --size pxWidth,pxHeight`))
+        }
+    }
+
+    // console.log(png)
 
     let pal = null
     let paletteData = getPaletteData(png)
 
-    console.log("yayaya")
-    console.log(paletteData.pal)
+    // console.log(paletteData)
+
+    // console.log("yayaya")
+    // console.log(paletteData.pal)
 
     let charData = null
     if(argv.fcm) {
         convertedPal = paletteData.pal
-        charData = getFCMData(png, paletteData.palette)
+        charData = getFCMData(png, charsWidth, charsHeight, paletteData.palette)
+        // console.log(charData)
         // convertedPal = trimFCMPalette(charData, convertedPal)
     }
 
@@ -810,7 +919,7 @@ async function runCharMapper(argv) {
         fs.writeFileSync(path.resolve(argv.palette), Buffer.from(convertedPal.r.concat(convertedPal.g).concat(convertedPal.b)))
         fs.writeFileSync(path.resolve(outputPath, inputName+"_pal.bin"), Buffer.from([]))
     } else {
-        console.log(convertedPal)
+        //console.log(convertedPal)
         fs.writeFileSync(path.resolve(outputPath, inputName+"_pal.bin"), Buffer.from(convertedPal.r.concat(convertedPal.g).concat(convertedPal.b)))
     }
 
@@ -826,7 +935,6 @@ async function runSpriteMapper(argv) {
     let inputName = path.parse(argv.input).name
     let png = await getPngData(argv.input)
 
-    if(!argv.size) throw(new Error(`You must supply a sprite size using --size pxWidth,pxHeight`))
     if(!argv.size) throw(new Error(`You must supply a sprite size using --size pxWidth,pxHeight`))
  
     let spriteWidth = 0
@@ -856,15 +964,17 @@ async function runSpriteMapper(argv) {
     let charData = null
     let spriteData = null
 
-    console.log(paletteData)
+    // console.log(paletteData)
 
     console.log("paletteData.pal.length "+paletteData.pal.r.length)
     if(argv.fcm) {
         console.log("Building sprites in FCM mode")
 
+        charData = getFCMDataForSprites(png, paletteData.palette, spriteWidth/8, spriteHeight/8)
+        // charData = getFCMData(png, png.width, png.height, paletteData.palette)
+        // charData = sortFCMDataForSprites(png, spriteWidth/8, spriteHeight/8,  paletteData.palette, charData)
+
         convertedPal = paletteData.pal
-        charData = getFCMData(png, paletteData.palette)
-        charData = sortFCMDataForSprites(png, spriteWidth/8, spriteHeight/8,  paletteData.palette, charData)
     }
 
     if(argv.ncm) {

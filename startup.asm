@@ -160,6 +160,9 @@ GameSubState:		.byte $00
 GameStateTimer:		.byte $00
 GameStateData:		.byte $00,$00,$00
 
+SaveState:			.dword 0
+SaveStateEnd:
+
 //--------------------------------------------------------
 // Main
 //--------------------------------------------------------

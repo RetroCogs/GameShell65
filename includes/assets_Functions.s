@@ -29,7 +29,7 @@
 	.print "adding asset '" + path + "' at baseChar [$" + toHexString(newAsset.baseChar) + "] " + newAsset.name + " at $" + toHexString(newAsset.addr) + " size = $" + toHexString(newAsset.binary.getSize()) + " crunchaddress = $" + toHexString(newAsset.crunchAddress)
 	
 	.eval Asset_CurrPtr += newAsset.binary.getSize()
-	.eval Asset_CurrPtr = (Asset_CurrPtr + $00ff) & $fff00
+	.eval Asset_CurrPtr = (Asset_CurrPtr + $00ff) & $fffff00
 
 	.return AssetList.get(id)
 }
