@@ -109,6 +109,13 @@ DrawPixie:
 	phy
 	phz
 
+	sec
+	lda DrawPosX+0
+	sbc Layout.LayoutWidth+0
+	lda DrawPosX+1
+	sbc Layout.LayoutWidth+1
+	lbpl done
+
 	// Grab all of the params from the pixie layout
 	//
 	lda pixieLayoutH,x					

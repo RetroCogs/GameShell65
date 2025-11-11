@@ -50,7 +50,7 @@
 
 // Maximum number of Pixie words use per row, 1 pixie is 2 words (GOTOX + CHAR)
 //
-.const NUM_PIXIES = 64						// Must be < 256
+.const NUM_PIXIES = 48						// Must be < 256
 .const NUM_PIXIEWORDS = NUM_PIXIES * 2
 
 // ------------------------------------------------------------
