@@ -57,6 +57,7 @@
 // Layer layout for title screen example
 //
 // 1) BG layer for background
+//
 // 2) Pixie layer for you know, pixies
 //
 // 3) Always end with EOL layer
@@ -74,6 +75,7 @@
 //
 // 1) BG0 layer for background
 // 1) BG1 layer for midground
+//
 // 2) Pixie layer for you know, pixies
 //
 // 3) Always end with EOL layer
@@ -95,9 +97,13 @@
 // 1) BG0 layer for background
 // 1) BG1 layer for midground
 // 1) BG1 layer for midground
+//
 // 2) Pixie layer for you know, pixies
 //
-// 3) Always end with EOL layer
+// 3) BG1 layer for foreground
+// 3) BG1 layer for foreground
+//
+// 4) Always end with EOL layer
 //
 .const Layout3 = NewLayout("credits", PLAY_SCREEN_WIDTH, PLAY_SCREEN_HEIGHT, (PLAY_SCREEN_HEIGHT / 8))
 .const Layout3_BG0a = Layer_BG("bg_level0a", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
