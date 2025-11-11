@@ -37,6 +37,7 @@ datablobs:
 		sdcard/bg21_chr.bin \
 		sdcard/bg22_chr.bin \
 		sdcard/font_chr.bin \
+		sdcard/32x32sprite_chr.bin \
 		sdcard/data.bin
 
 	$(MEGATOOL) -a sdcard/data.bin 00000000
@@ -53,6 +54,7 @@ map:
 
 data: map
 	$(PNG65) sprites --ncm --size 16,16 --input "assets/font.png" --output "sdcard" --nofill
+	$(PNG65) sprites --ncm --size 32,32 --input "assets/32x32sprite.png" --output "sdcard" --nofill
 
 run: all
 	$(XEMU) -autoload -8 $(DISKNAME) -uartmon :4510 -videostd 1

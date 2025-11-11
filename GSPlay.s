@@ -161,8 +161,6 @@ _not_fire:
 //
 gsDrwPlay: 
 {
-	_set8im($0f, DrawPal)
-
 	jsr DrawObjData
 
 	rts
@@ -229,17 +227,19 @@ UpdateObjData:
 //
 DrawObjData:
 {
-	_set16im((sprFont.baseChar), DrawBaseChr)			// Start charIndx with first pixie char
+	_set16im(sprite32x32Chars.baseChar, DrawBaseChr)			// Start charIndx with first pixie char
+
+	_set8im((PAL_SPR << 4) | $0f, DrawPal)
 
 	// Add Objs into the work ram here
 	//
 	ldx #$00
 !:
 	phx
-	
+
 	sec
 	lda Objs1PosYLo,x
-	sbc #$10
+	sbc #$20
 	sta DrawPosY+0
 	lda #$00
 	sbc #$00
@@ -262,7 +262,7 @@ DrawObjData:
 	and #$0f
 	sta $d020
 
-	ldx #PIXIE_16x16
+	ldx #PIXIE_32x32
 	jsr DrawPixie
 
 	plx
@@ -298,9 +298,11 @@ iloop1:
 	sta Objs1VelY,x
 
 	txa
-	and #$01
+	and #$03
 	clc
-	adc #$1e
+	adc #$00
+	asl
+	asl
 	asl
 	sta Objs1Spr,x
 

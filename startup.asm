@@ -17,14 +17,15 @@
 .const SCREEN_RAM = $50000		// screen ram / pixie work ram goes here
 
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
-.segmentdef Code [start=$2000, max=$7fff]
-.segmentdef Data [start=$a000, max=$cfff]
+.segmentdef Code [start=$2000, max=$cfff]
+.segmentdef Data [startAfter="Code", max=$cfff]
 .segmentdef BSS [start=$e000, max=$f400, virtual]
 
-.segmentdef MapRam [start=MAP_RAM, max=SCREEN_RAM-1, virtual]
+.segmentdef GraphicsRam [start=CHARS_RAM, max=SCREEN_RAM-1, virtual]
 
 .segmentdef ScreenRam [start=SCREEN_RAM, virtual]
 .segmentdef PixieWorkRam [startAfter="ScreenRam", max=SCREEN_RAM+$ffff, virtual]
+.segmentdef MapRam [startAfter="PixieWorkRam", max=SCREEN_RAM+$ffff, virtual]
 
 // ------------------------------------------------------------
 // Defines to describe the screen size
@@ -49,7 +50,7 @@
 
 // Maximum number of Pixie words use per row, 1 pixie is 2 words (GOTOX + CHAR)
 //
-.const NUM_PIXIES = 48						// Must be < 256
+.const NUM_PIXIES = 64						// Must be < 256
 .const NUM_PIXIEWORDS = NUM_PIXIES * 2
 
 // ------------------------------------------------------------
@@ -134,6 +135,8 @@
 	PAL_BG1,
 	PAL_BG2,
 
+	PAL_SPR,
+
 	NUM_PALETTES
 }
 
@@ -174,11 +177,13 @@ SaveStateEnd:
 .print "--------"
 
 .const bgCharsBegin = SetAssetAddr(CHARS_RAM, $40000)
-.const bg0Chars = AddAsset("FS-C0", "sdcard/bg20_chr.bin")
-.const bg1Chars = AddAsset("FS-C1", "sdcard/bg21_chr.bin")
-.const bg2Chars = AddAsset("FS-C2", "sdcard/bg22_chr.bin")
+.const bg0Chars = AddAsset("F", "sdcard/bg20_chr.bin")
+.const bg1Chars = AddAsset("F", "sdcard/bg21_chr.bin")
+.const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
 
-.const sprFont = AddAsset("FS-F0", "sdcard/font_chr.bin")
+.const sprFont = AddAsset("F", "sdcard/font_chr.bin")
+
+.const sprite32x32Chars = AddAsset("F", "sdcard/32x32sprite_chr.bin")
 
 .print "--------"
 
@@ -425,6 +430,7 @@ Palette:
 	.import binary "./sdcard/bg20_pal.bin"
 	.import binary "./sdcard/bg21_pal.bin"
 	.import binary "./sdcard/bg22_pal.bin"
+	.import binary "./sdcard/32x32sprite_pal.bin"
 
 // ------------------------------------------------------------
 // Ensure these tables DONOT straddle a bank address

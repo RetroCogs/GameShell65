@@ -3,7 +3,13 @@
 .enum 
 {
 	PIXIE_16x8,
-	PIXIE_16x16
+	PIXIE_16x16,
+	PIXIE_16x24,
+	PIXIE_16x32,
+	PIXIE_32x8,
+	PIXIE_32x16,
+	PIXIE_32x24,
+	PIXIE_32x32
 }
 
 .segment Zeropage "Pixie ZP"
@@ -82,26 +88,39 @@ JobFill:
 yShiftTable:	.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)|$10,(6<<5)|$10,(7<<5)|$10
 yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
 
-pixieLayoutH:	.byte 1,2
+pixieLayoutH:	.byte 1,2,3,4,1,2,3,4
+pixieLayoutW:	.byte 1,1,1,1,2,2,2,2
 
 DrawPixie:
 {
-	.var tilePtr = Tmp					// 32bit
-	.var attribPtr = Tmp1				// 32bit
+	.var tilePtr 	= Tmp					// 32 bit
+	.var attribPtr 	= Tmp1					// 32 bit
 
-	.var charIndx = Tmp2+0				// 16bit
-	.var yShift = Tmp2+2				// 8bit
-	.var gotoXmask = Tmp2+3				// 8bit
+	.var charIndx 	= Tmp2+0				// 16 bit
+	.var yShift 	= Tmp2+2				// 8 bit
+	.var gotoXmask 	= Tmp2+3				// 8 bit
 
-	.var charHigh = Tmp3+0				// 8bit
+	.var charHigh 	= Tmp3+0				// 8 bit
+	.var charStep 	= Tmp3+1				// 8 bit
+	.var charWidth 	= Tmp3+2				// 8 bit
+	.var charBytes	= Tmp3+3				// 8 bit
 
 	phx
 	phy
 	phz
 
-	lda pixieLayoutH,x
+	// Grab all of the params from the pixie layout
+	//
+	lda pixieLayoutH,x					
+	sta charStep						// Number of chars between columns
 	dec
-	sta charHigh
+	sta charHigh						// Value for row loop = (num chars high - 1)
+
+	lda pixieLayoutW,x					
+	sta charWidth						// Value for column loop = (num chars wide - 1)
+	inc
+	asl
+	sta charBytes						// number of bytes to add = ((num chars wide + 1)*2)
 
 	_set16(DrawBaseChr, charIndx)		// Start charIndx with first pixie char
 
@@ -144,16 +163,16 @@ DrawPixie:
 	lda DrawPosY+0
 	sta posy
 
-	lda DrawPosY+1
+	lda DrawPosY+1						// row index = drawPosY / 8 (and handle for -ve)
 	cmp #$80
 	ror
-	ror posy+0
+	ror posy
 	cmp #$80
 	ror
-	ror posy+0
+	ror posy
 	cmp #$80
 	ror
-	ror posy+0
+	ror posy
 
 	lda posy:#$00
 	tax									// move yRow into X reg
@@ -167,13 +186,13 @@ DrawPixie:
 	dec PixieUseCount,x
 
 	// Top character, this uses the first mask from the tables above,
-    // grab tile and attrib ptr for this row and advance by the 4 bytes
+    // grab tile and attrib ptr for this row and advance by the N bytes
     // that we will write per row.
 	//
 	clc                                 // grab and advance tilePtr
 	lda PixieRowScreenPtrLo,x
 	sta tilePtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowScreenPtrLo,x
 	lda PixieRowScreenPtrHi,x
 	sta tilePtr+1
@@ -182,7 +201,7 @@ DrawPixie:
 	clc                                 // grab and advance attribPtr
 	lda PixieRowAttribPtrLo,x
 	sta attribPtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowAttribPtrLo,x
 	lda PixieRowAttribPtrHi,x
 	sta attribPtr+1
@@ -204,16 +223,7 @@ DrawPixie:
 	sta ((attribPtr)),z
 	inz
 
-	// Char
-	lda charIndx+0
-	sta ((tilePtr)),z
-	lda DrawMode
-	sta ((attribPtr)),z
-	inz	
-	lda charIndx+1
-	sta ((tilePtr)),z
-	lda DrawPal
-	sta ((attribPtr)),z
+	jsr addRowOfChars
 
 middleRow:
 	dec charHigh
@@ -223,7 +233,7 @@ middleRow:
 	// Advance to next row and charIndx
     inw charIndx
 	inx
-	bmi bottomRow
+	bmi middleRow								// If still above the first row then try another middle row
 	cpx Layout.NumRows
 	lbcs done
     
@@ -239,7 +249,7 @@ middleRow:
 	clc                                 // grab and advance tilePtr
 	lda PixieRowScreenPtrLo,x
 	sta tilePtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowScreenPtrLo,x
 	lda PixieRowScreenPtrHi,x
 	sta tilePtr+1
@@ -248,7 +258,7 @@ middleRow:
 	clc                                 // grab and advance attribPtr
 	lda PixieRowAttribPtrLo,x
 	sta attribPtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowAttribPtrLo,x
 	lda PixieRowAttribPtrHi,x
 	sta attribPtr+1
@@ -270,16 +280,7 @@ middleRow:
 	sta ((attribPtr)),z
 	inz
 
-	// Char
-	lda charIndx+0
-	sta ((tilePtr)),z
-	lda DrawMode
-	sta ((attribPtr)),z
-	inz	
-	lda charIndx+1
-	sta ((tilePtr)),z
-	lda DrawPal
-	sta ((attribPtr)),z
+	jsr addRowOfChars
 
 	bra middleRow
 
@@ -295,7 +296,7 @@ bottomRow:
 	inx
 	bmi done
 	cpx Layout.NumRows
-	lbcs done
+	bcs done
 
 	// See if number of words has been exhausted
 	lda PixieUseCount,x
@@ -309,7 +310,7 @@ bottomRow:
 	clc                                 // grab and advance tilePtr
 	lda PixieRowScreenPtrLo,x
 	sta tilePtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowScreenPtrLo,x
 	lda PixieRowScreenPtrHi,x
 	sta tilePtr+1
@@ -318,7 +319,7 @@ bottomRow:
 	clc                                 // grab and advance tilePtr
 	lda PixieRowAttribPtrLo,x
 	sta attribPtr+0
-	adc #$04
+	adc charBytes
 	sta PixieRowAttribPtrLo,x
 	lda PixieRowAttribPtrHi,x
 	sta attribPtr+1
@@ -344,16 +345,7 @@ bottomRow:
 	sta ((attribPtr)),z
 	inz
 
-	// Char
-	lda charIndx+0
-	sta ((tilePtr)),z
-	lda DrawMode
-	sta ((attribPtr)),z
-	inz	
-	lda charIndx+1
-	sta ((tilePtr)),z
-	lda DrawPal
-	sta ((attribPtr)),z
+	jsr addRowOfChars
 
 done:
 
@@ -362,6 +354,50 @@ done:
 	plx
 
 	rts
+
+	// For each GOTOX we can add multiple chars so loop through and add them
+	// each new char will skip charSkip indexes so we need to store and restore
+	// that value
+	//
+	addRowOfChars:
+	{
+		lda charIndx+0
+		pha
+		lda charIndx+1
+		pha
+
+		ldy charWidth						// loop to add charWidth chars
+	cloop:
+		// Char
+		lda charIndx+0
+		sta ((tilePtr)),z
+		lda DrawMode
+		sta ((attribPtr)),z
+		inz	
+		lda charIndx+1
+		sta ((tilePtr)),z
+		lda DrawPal
+		sta ((attribPtr)),z
+		inz
+		
+		clc									// move to the next column's char
+		lda charIndx+0
+		adc charStep
+		sta charIndx+0
+		lda charIndx+1
+		adc #$00
+		sta charIndx+1
+
+		dey
+		bne cloop
+
+		pla
+		sta charIndx+1
+		pla
+		sta charIndx+0
+
+		rts
+	}
 }
 
 // ------------------------------------------------------------
