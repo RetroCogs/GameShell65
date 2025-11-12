@@ -12,8 +12,7 @@
 .const COLOR_OFFSET = $0800		// Offset ColorRam to make bank $10000 contiguous
 .const COLOR_RAM = $ff80000 + COLOR_OFFSET
 
-.const CHARS_RAM = $10000		// all bg chars / pixie data goes here
-.const MAP_RAM = $40000			// bg map data goes here
+.const GRAPHICS_RAM = $10000	// all bg chars / pixie data goes here
 .const SCREEN_RAM = $50000		// screen ram / pixie work ram goes here
 
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
@@ -21,7 +20,7 @@
 .segmentdef Data [startAfter="Code", max=$cfff]
 .segmentdef BSS [start=$e000, max=$f400, virtual]
 
-.segmentdef GraphicsRam [start=CHARS_RAM, max=SCREEN_RAM-1, virtual]
+.segmentdef GraphicsRam [start=GRAPHICS_RAM, max=SCREEN_RAM-1, virtual]
 
 .segmentdef ScreenRam [start=SCREEN_RAM, virtual]
 .segmentdef PixieWorkRam [startAfter="ScreenRam", max=SCREEN_RAM+$ffff, virtual]
@@ -182,19 +181,19 @@ SaveStateEnd:
 
 .print "--------"
 
-.const bgCharsBegin = SetAssetAddr(CHARS_RAM, $40000)
+.const bgCharsBegin = StartSection("GraphicsRan", GRAPHICS_RAM, SCREEN_RAM-GRAPHICS_RAM)
 .const bg0Chars = AddAsset("F", "sdcard/bg20_chr.bin")
 .const bg1Chars = AddAsset("F", "sdcard/bg21_chr.bin")
 .const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
-
 .const sprFont = AddAsset("F", "sdcard/font_chr.bin")
-
 .const sprite32x32Chars = AddAsset("F", "sdcard/32x32sprite_chr.bin")
+.const bgCharsEnd = EndSection()
 
 .print "--------"
 
-.const blobsBegin = SetAssetAddr($00000, $40000)
+.const blobsBegin = StartSection("iffl", $00000, $40000)
 .const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin.addr.mc")
+.const blobsEnd = EndSection()
 
 .print "--------"
 
@@ -437,6 +436,11 @@ Palette:
 	.import binary "./sdcard/bg21_pal.bin"
 	.import binary "./sdcard/bg22_pal.bin"
 	.import binary "./sdcard/32x32sprite_pal.bin"
+
+// ------------------------------------------------------------
+.segment GraphicsRam "Graphics RAM"
+GraphicsData:
+	.fill (bgCharsBegin.currAddr - bgCharsBegin.baseAddr),0
 
 // ------------------------------------------------------------
 // Ensure these tables DONOT straddle a bank address
