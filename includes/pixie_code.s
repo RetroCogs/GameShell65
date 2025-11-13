@@ -76,7 +76,7 @@ JobFill:
 	.for(var r=0; r<MAX_NUM_ROWS; r++) {
 		// Atrib
 		DMAFillJob(
-			$90,
+			$90,							// GOTOX + Transparent
 			PixieWorkAttrib + (r * Layout1_Pixie.DataSize),
 			Layout1_Pixie.DataSize / 2,
 			(r!=(MAX_NUM_ROWS-1)))
@@ -88,6 +88,7 @@ JobFill:
 yShiftTable:	.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)|$10,(6<<5)|$10,(7<<5)|$10
 yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
 
+// Number of chars wide and high for each of the pixie layouts
 pixieLayoutH:	.byte 1,2,3,4,1,2,3,4
 pixieLayoutW:	.byte 1,1,1,1,2,2,2,2
 

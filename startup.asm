@@ -30,10 +30,10 @@
 // Defines to describe the screen size
 //
 .const SCREEN_WIDTH = 320
-.const SCREEN_HEIGHT = 208
+.const SCREEN_HEIGHT = 200
 
 .const PLAY_SCREEN_WIDTH = 320
-.const PLAY_SCREEN_HEIGHT = 208
+.const PLAY_SCREEN_HEIGHT = 200
 
 // ------------------------------------------------------------
 //
@@ -49,7 +49,7 @@
 
 // Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
-.const NUM_PIXIEWORDS = 96					// Must be < 256
+.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
 
 // ------------------------------------------------------------
 // Layer layout for title screen example
