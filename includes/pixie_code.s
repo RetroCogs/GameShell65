@@ -143,7 +143,8 @@ DrawPixie:
 	adc #$00
 	sta charIndx+1
 
-	lda PixieYShift					// This game doesn't use vertical scrolling
+	lda PixieYShift						// Shift the pixies down if base layer is vertically scrolling
+	beq no_vertical_scrolling
 	and #$07
 	sta lshift
 
@@ -154,6 +155,8 @@ DrawPixie:
 	lda DrawPosY+1
 	adc #0
 	sta DrawPosY+1
+
+no_vertical_scrolling:
 
 	lda DrawPosY+0						// Find sub row y offset (0 - 7)
 	and #$07
