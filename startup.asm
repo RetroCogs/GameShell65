@@ -47,10 +47,9 @@
 // Layer constants
 //
 
-// Maximum number of Pixie words use per row, 1 pixie is 2 words (GOTOX + CHAR)
+// Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
-.const NUM_PIXIES = 48						// Must be < 256
-.const NUM_PIXIEWORDS = NUM_PIXIES * 2
+.const NUM_PIXIEWORDS = 96					// Must be < 256
 
 // ------------------------------------------------------------
 // Layer layout for title screen example

@@ -275,6 +275,9 @@ DrawObjData:
 
 // ------------------------------------------------------------
 //
+initXVel:	.word $ffff,$0001
+initYVel:	.byte $fe,$ff,$01,$02
+
 InitObjData:
 {
     .var xpos = Tmp       // 16bit
@@ -294,8 +297,6 @@ iloop1:
 	sta Objs1PosXHi,x
 	lda ypos
 	sta Objs1PosYLo,x
-	lda #1
-	sta Objs1VelY,x
 
 	txa
 	and #$03
@@ -308,17 +309,18 @@ iloop1:
 
 	txa
 	and #$01
-	bne ip1
-	lda #$ff
+	asl
+	tay
+	lda initXVel+0,y
 	sta Objs1VelXLo,x
+	lda initXVel+1,y
 	sta Objs1VelXHi,x
-	bra id1
-ip1:
-	lda #$01
-	sta Objs1VelXLo,x
-	lda #$00
-	sta Objs1VelXHi,x
-id1:
+
+	txa
+	and #$03
+	tay
+	lda initYVel,y
+	sta Objs1VelY,x
 
 	_add16im(xpos, -28, xpos)
 	_and16im(xpos, $1ff, xpos)

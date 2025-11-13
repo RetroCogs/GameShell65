@@ -42,7 +42,7 @@ ClearWorkPixies:
 	// Clear the RRBIndex list
 	ldx #0
 !:
-	lda #NUM_PIXIES
+	lda #NUM_PIXIEWORDS
 	sta PixieUseCount,x
 
 	lda rowScreenPtr+0
