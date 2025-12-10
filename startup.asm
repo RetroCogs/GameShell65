@@ -57,7 +57,7 @@
 
 // Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
-.const NUM_PIXIEWORDS = 128					// Must be < 128 (to keep indexing within range)
+.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
 
 // ------------------------------------------------------------
 // Layer layout for title screen example
