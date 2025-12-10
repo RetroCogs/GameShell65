@@ -9,22 +9,30 @@
 // ------------------------------------------------------------
 // Memory layout
 //
-.const COLOR_OFFSET = $0800		// Offset ColorRam to make bank $10000 contiguous
+.const COLOR_OFFSET = $0800				// Offset ColorRam to make bank $10000 contiguous
 .const COLOR_RAM = $ff80000 + COLOR_OFFSET
 
-.const GRAPHICS_RAM = $10000	// all bg chars / pixie data goes here
-.const SCREEN_RAM = $50000		// screen ram / pixie work ram goes here
+.const GRAPHICS_RAM = $10000			// all bg chars / pixie data goes here
+.const PIXIEANDSCREEN_RAM = $50000		// screen ram / pixie work ram goes here
+										// must be on a $100 alignment due to RRB pixie MAP behavior
 
+// --------------
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
 .segmentdef Code [start=$2000, max=$cfff]
 .segmentdef Data [startAfter="Code", max=$cfff]
+
+.segmentdef MappedPixieWorkRam [start=$8000, max=$bfff, virtual]
+
 .segmentdef BSS [start=$e000, max=$f400, virtual]
 
-.segmentdef GraphicsRam [start=GRAPHICS_RAM, max=SCREEN_RAM-1, virtual]
+// --------------
+.segmentdef GraphicsRam [start=GRAPHICS_RAM, max=PIXIEANDSCREEN_RAM-1, virtual]
 
-.segmentdef ScreenRam [start=SCREEN_RAM, virtual]
-.segmentdef PixieWorkRam [startAfter="ScreenRam", max=SCREEN_RAM+$ffff, virtual]
-.segmentdef MapRam [startAfter="PixieWorkRam", max=SCREEN_RAM+$ffff, virtual]
+// --------------
+// Ensure PixieWorkRam is on a $100 alignemt due to RRB pixie MAP behavior
+.segmentdef PixieWorkRam [start=PIXIEANDSCREEN_RAM, max=PIXIEANDSCREEN_RAM+$ffff, virtual]
+.segmentdef ScreenRam [startAfter="PixieWorkRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
+.segmentdef MapRam [startAfter="ScreenRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
 
 // ------------------------------------------------------------
 // Defines to describe the screen size
@@ -49,7 +57,7 @@
 
 // Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
-.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
+.const NUM_PIXIEWORDS = 128					// Must be < 128 (to keep indexing within range)
 
 // ------------------------------------------------------------
 // Layer layout for title screen example
@@ -148,6 +156,8 @@
 //
 .segment Zeropage "Main zeropage"
 
+TotalTime:		.byte $00
+
 Tmp:			.word $0000,$0000		// General reusable data (Don't use in IRQ)
 Tmp1:			.word $0000,$0000
 Tmp2:			.word $0000,$0000
@@ -156,6 +166,8 @@ Tmp4:			.word $0000,$0000
 Tmp5:			.word $0000,$0000
 Tmp6:			.word $0000,$0000
 Tmp7:			.word $0000,$0000
+
+.print "TotalTime = $" + toHexString(TotalTime)
 
 // ------------------------------------------------------------
 //
@@ -180,7 +192,7 @@ SaveStateEnd:
 
 .print "--------"
 
-.const bgCharsBegin = StartSection("GraphicsRan", GRAPHICS_RAM, SCREEN_RAM-GRAPHICS_RAM)
+.const bgCharsBegin = StartSection("GraphicsRan", GRAPHICS_RAM, PIXIEANDSCREEN_RAM-GRAPHICS_RAM)
 .const bg0Chars = AddAsset("F", "sdcard/bg20_chr.bin")
 .const bg1Chars = AddAsset("F", "sdcard/bg21_chr.bin")
 .const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
@@ -265,7 +277,7 @@ Entry:
 
 	jsr System.Initialization2
 
-	VIC4_SetScreenLocation(SCREEN_RAM)
+	VIC4_SetScreenLocation(ScreenRam)
 
 	// Initialize palette and bgmap data
 	jsr InitPalette
@@ -354,6 +366,9 @@ skipEnable:
 	jsr (GSDrwStateTable,x)
 
 	DbgBord(0)
+
+	lda $d012
+	sta TotalTime
 
 	jmp mainloop
 }
@@ -444,6 +459,12 @@ GraphicsData:
 // ------------------------------------------------------------
 // Ensure these tables DONOT straddle a bank address
 //
+.segment MappedPixieWorkRam "Mapped Pixie Work RAM"
+MappedPixieWorkTiles:
+	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
+MappedPixieWorkAttrib:
+	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
+
 .segment PixieWorkRam "Pixie Work RAM"
 PixieWorkTiles:
 	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
@@ -451,5 +472,6 @@ PixieWorkAttrib:
 	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
 
 .segment ScreenRam "Screen RAM"
+ScreenRam:
 	.fill (MAX_SCREEN_SIZE), $00
 

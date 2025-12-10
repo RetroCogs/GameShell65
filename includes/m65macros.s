@@ -73,28 +73,6 @@ keywait:
 start:
 }
 
-.macro mapHi(source, target, blocks) {
-	.var sourceMB = (source & $ff00000) >> 20
-	.var sourceOffset = ((source & $00fff00) - target)
-	.var sourceOffHi = sourceOffset >> 16
-	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitHi = blocks << 4
-
-	ldy #sourceOffLo
-	ldz #[sourceOffHi + bitHi]
-}
-
-.macro mapLo(source, target, blocks) {
-	.var sourceMB = (source & $ff00000) >> 20
-	.var sourceOffset = ((source & $00fff00) - target)
-	.var sourceOffHi = sourceOffset >> 16
-	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitLo = blocks << 4
-
-	lda #sourceOffLo
-	ldx #[sourceOffHi + bitLo]
-}
-
 // _set8im - store an 8bit constant to a memory location
 .macro _set8im(value, dst)
 {
@@ -546,41 +524,26 @@ start:
 	trb $d030
 }
 
-.macro mapMemory(source, target) {
+.macro mapHi(source, target, blocks) {
 	.var sourceMB = (source & $ff00000) >> 20
 	.var sourceOffset = ((source & $00fff00) - target)
 	.var sourceOffHi = sourceOffset >> 16
 	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitLo = pow(2, (((target) & $ff00) >> 12) / 2) << 4
-	.var bitHi = pow(2, (((target-$8000) & $ff00) >> 12) / 2) << 4
-	
-	.if(target<$8000) {
-		lda #sourceMB
-		ldx #$0f
-		ldy #$00
-		ldz #$00
-	} else {
-		lda #$00
-		ldx #$00
-		ldy #sourceMB
-		ldz #$0f
-	}
-	map 
+	.var bitHi = blocks << 4
 
-	//Set offset map
-	.if(target<$8000) {
-		lda #sourceOffLo
-		ldx #[sourceOffHi + bitLo]
-		ldy #$00
-		ldz #$00
-	} else {
-		lda #$00
-		ldx #$00
-		ldy #sourceOffLo
-		ldz #[sourceOffHi + bitHi]
-	}	
-	map 
-	eom
+	ldy #sourceOffLo
+	ldz #[sourceOffHi + bitHi]
+}
+
+.macro mapLo(source, target, blocks) {
+	.var sourceMB = (source & $ff00000) >> 20
+	.var sourceOffset = ((source & $00fff00) - target)
+	.var sourceOffHi = sourceOffset >> 16
+	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
+	.var bitLo = blocks << 4
+
+	lda #sourceOffLo
+	ldx #[sourceOffHi + bitLo]
 }
 
 .macro unmapMemory()

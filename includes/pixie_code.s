@@ -36,14 +36,14 @@ ClearWorkPixies:
 	lda #$00
 	sta PixieYShift
 	
-	_set16im(PixieWorkTiles, rowScreenPtr)
-	_set16im(PixieWorkAttrib, rowAttribPtr)
+	_set16im(MappedPixieWorkTiles, rowScreenPtr)
+	_set16im(MappedPixieWorkAttrib, rowAttribPtr)
 
 	// Clear the RRBIndex list
 	ldx #0
 !:
-	lda #NUM_PIXIEWORDS
-	sta PixieUseCount,x
+	lda #0
+	sta PixieUseOffset,x
 
 	lda rowScreenPtr+0
 	sta PixieRowScreenPtrLo,x
@@ -91,31 +91,28 @@ yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%
 // Number of chars wide and high for each of the pixie layouts
 pixieLayoutH:	.byte 1,2,3,4,1,2,3,4
 pixieLayoutW:	.byte 1,1,1,1,2,2,2,2
+pixieLayoutB:	.byte 4,4,4,4,6,6,6,6
 
 DrawPixie:
 {
-	.var tilePtr 	= Tmp					// 32 bit
-	.var attribPtr 	= Tmp1					// 32 bit
+	.var tilePtr 	= Tmp					// 16 bit
+	.var attribPtr 	= Tmp+2					// 16 bit
+
+	.var tcharIndx 	= Tmp1+0				// 16 bit
+	.var xpos		= Tmp1+2				// 16 bit
 
 	.var charIndx 	= Tmp2+0				// 16 bit
 	.var yShift 	= Tmp2+2				// 8 bit
 	.var gotoXmask 	= Tmp2+3				// 8 bit
 
 	.var charHigh 	= Tmp3+0				// 8 bit
-	.var charStep 	= Tmp3+1				// 8 bit
-	.var charWidth 	= Tmp3+2				// 8 bit
-	.var charBytes	= Tmp3+3				// 8 bit
+	.var charWidth 	= Tmp3+1				// 8 bit
+	.var charStep	= Tmp3+2				// 8 bit
+	.var maxRowOffs	= Tmp3+3				// 8 bit
 
 	phx
 	phy
 	phz
-
-	sec
-	lda DrawPosX+0
-	sbc Layout.LayoutWidth+0
-	lda DrawPosX+1
-	sbc Layout.LayoutWidth+1
-	lbpl done
 
 	// Grab all of the params from the pixie layout
 	//
@@ -126,20 +123,33 @@ DrawPixie:
 
 	lda pixieLayoutW,x					
 	sta charWidth						// Value for column loop = (num chars wide - 1)
-	inc
-	asl
-	sta charBytes						// number of bytes to add = ((num chars wide + 1)*2)
 
-	_set16(DrawBaseChr, charIndx)		// Start charIndx with first pixie char
+	sec
+	lda #(NUM_PIXIEWORDS*2)				// (3*2) = 6
+	sbc pixieLayoutB,x					// -6
+	sta maxRowOffs						// 0
 
-	_set32im(PixieWorkTiles, tilePtr)	// Set base full 32 bit pointers
-	_set32im(PixieWorkAttrib, attribPtr)
+	// Map in the pixie working buffer to allow 16bit access
+	//
+	mapHi(PixieWorkTiles, MappedPixieWorkTiles, $03)	// $8000-bfff is mapped
+	mapLo(0, 0, 0)
+	map
+	eom
 
-	clc
-	lda charIndx+0
+	// Check to see if the xpos > current layout width
+	//
+	sec
+	lda DrawPosX+0
+	sbc Layout.LayoutWidth+0
+	lda DrawPosX+1
+	sbc Layout.LayoutWidth+1
+	lbpl done
+
+	clc									// Start charIndx with first pixie char
+	lda DrawBaseChr+0
 	adc DrawSChr
 	sta charIndx+0
-	lda charIndx+1
+	lda DrawBaseChr+1
 	adc #$00
 	sta charIndx+1
 
@@ -168,6 +178,13 @@ no_vertical_scrolling:
 	lda yShiftTable,y					// grab the yShift value 
 	sta yShift
 
+	lda DrawPosX+0
+	sta xpos+0
+	lda DrawPosX+1
+	and #$03
+	ora yShift
+	sta xpos+1
+
 	// Calculate which row to add pixie data to, put this in X,
     // we use this to index the row tile / attrib ptrs
  	// 
@@ -187,53 +204,12 @@ no_vertical_scrolling:
 
 	lda posy:#$00
 	tax									// move yRow into X reg
-	bmi middleRow
-	cpx Layout.NumRows
-	lbcs done
+	bmi middleRow						// if above first row then skip to middle section
+	cpx Layout.NumRows					// if below last row then done
+	bcs done
 
-	// See if number of words has been exhausted
-	lda PixieUseCount,x
-	beq middleRow
-	dec PixieUseCount,x
-
-	// Top character, this uses the first mask from the tables above,
-    // grab tile and attrib ptr for this row and advance by the N bytes
-    // that we will write per row.
-	//
-	clc                                 // grab and advance tilePtr
-	lda PixieRowScreenPtrLo,x
-	sta tilePtr+0
-	adc charBytes
-	sta PixieRowScreenPtrLo,x
-	lda PixieRowScreenPtrHi,x
-	sta tilePtr+1
-	adc #$00
-	sta PixieRowScreenPtrHi,x
-	clc                                 // grab and advance attribPtr
-	lda PixieRowAttribPtrLo,x
-	sta attribPtr+0
-	adc charBytes
-	sta PixieRowAttribPtrLo,x
-	lda PixieRowAttribPtrHi,x
-	sta attribPtr+1
-	adc #$00
-	sta PixieRowAttribPtrHi,x
-
-	// GOTOX
-	ldz #$00
-	lda DrawPosX+0						// tile = <xpos,>xpos | yShift
-	sta ((tilePtr)),z
-	lda #$98							// attrib = $98 (transparent+gotox+rowmask), gotoXmask
-	sta ((attribPtr)),z
-	inz
-	lda DrawPosX+1
-	and #$03
-	ora yShift
-	sta ((tilePtr)),z
+	// Top character, this uses the first mask from the tables above
 	lda gotoXmask
-	sta ((attribPtr)),z
-	inz
-
 	jsr addRowOfChars
 
 middleRow:
@@ -246,51 +222,10 @@ middleRow:
 	inx
 	bmi middleRow								// If still above the first row then try another middle row
 	cpx Layout.NumRows
-	lbcs done
+	bcs done
     
-	// See if number of words has been exhausted
-	lda PixieUseCount,x
-	beq bottomRow
-	dec PixieUseCount,x
-
 	// Middle character, yShift is the same as first char but full character is drawn so disable rowmask,
-    // grab tile and attrib ptr for this row and advance by the 4 bytes
-    // that we will write per row.
-	//
-	clc                                 // grab and advance tilePtr
-	lda PixieRowScreenPtrLo,x
-	sta tilePtr+0
-	adc charBytes
-	sta PixieRowScreenPtrLo,x
-	lda PixieRowScreenPtrHi,x
-	sta tilePtr+1
-	adc #$00
-	sta PixieRowScreenPtrHi,x
-	clc                                 // grab and advance attribPtr
-	lda PixieRowAttribPtrLo,x
-	sta attribPtr+0
-	adc charBytes
-	sta PixieRowAttribPtrLo,x
-	lda PixieRowAttribPtrHi,x
-	sta attribPtr+1
-	adc #$00
-	sta PixieRowAttribPtrHi,x	
-
-	// GOTOX
-	ldz #$00
-	lda DrawPosX+0						// tile = <xpos,>xpos | yShift
-	sta ((tilePtr)),z
-	lda #$90							// attrib = $98 (transparent+gotox), $00
-	sta ((attribPtr)),z
-	inz
-	lda DrawPosX+1
-	and #$03
-	ora yShift
-	sta ((tilePtr)),z
 	lda #$ff
-	sta ((attribPtr)),z
-	inz
-
 	jsr addRowOfChars
 
 	bra middleRow
@@ -309,56 +244,14 @@ bottomRow:
 	cpx Layout.NumRows
 	bcs done
 
-	// See if number of words has been exhausted
-	lda PixieUseCount,x
-	beq done
-	dec PixieUseCount,x
-
-	// Bottom character, yShift is the same as first char but flip the bits of the gotoXmask,
-    // grab tile and attrib ptr for this row and advance by the 4 bytes
-    // that we will write per row.
-	//
-	clc                                 // grab and advance tilePtr
-	lda PixieRowScreenPtrLo,x
-	sta tilePtr+0
-	adc charBytes
-	sta PixieRowScreenPtrLo,x
-	lda PixieRowScreenPtrHi,x
-	sta tilePtr+1
-	adc #$00
-	sta PixieRowScreenPtrHi,x
-	clc                                 // grab and advance tilePtr
-	lda PixieRowAttribPtrLo,x
-	sta attribPtr+0
-	adc charBytes
-	sta PixieRowAttribPtrLo,x
-	lda PixieRowAttribPtrHi,x
-	sta attribPtr+1
-	adc #$00
-	sta PixieRowAttribPtrHi,x
-
+	// Bottom character, yShift is the same as first char but flip the bits of the gotoXmask
 	lda gotoXmask
 	eor #$ff
-	sta gotoXmask
-
-	// GOTOX
-	ldz #$00
-	lda DrawPosX+0						// tile = <xpos,>xpos | yShift	
-	sta ((tilePtr)),z
-	lda #$98							// attrib = $98 (transparent+gotox+rowmask), gotoXmask
-	sta ((attribPtr)),z
-	inz
-	lda DrawPosX+1
-	and #$03
-	ora yShift
-	sta ((tilePtr)),z
-	lda gotoXmask
-	sta ((attribPtr)),z
-	inz
-
 	jsr addRowOfChars
 
 done:
+
+	unmapMemory()
 
 	plz
 	ply
@@ -372,41 +265,75 @@ done:
 	//
 	addRowOfChars:
 	{
-		lda charIndx+0
-		pha
+		sta rowMask
+
+		// grab tile and attrib ptr and offset for this row.
+		//
+		// See if number of words has been exhausted
+		//
+		lda PixieUseOffset,x				//
+		cmp maxRowOffs
+		beq do_draw
+		bcs skip
+
+	do_draw:	
+		taz
+
+		lda PixieRowScreenPtrLo,x			// grab and advance tilePtr
+		sta tilePtr+0
+		lda PixieRowScreenPtrHi,x
+		sta tilePtr+1
+		lda PixieRowAttribPtrLo,x			// grab and advance attribPtr
+		sta attribPtr+0
+		lda PixieRowAttribPtrHi,x
+		sta attribPtr+1
+
+		// GOTOX
+		lda xpos+0							// tile = <xpos,>xpos | yShift
+		sta (tilePtr),z
+		lda #$98							// attrib = $98 (transparent+gotox), $00
+		sta (attribPtr),z
+		inz
+		lda xpos+1
+		sta (tilePtr),z
+		lda rowMask:#$ff
+		sta (attribPtr),z
+		inz	// Store the tile and attrib offset for this row now that we've added some chars
+
+		lda charIndx+0						// Make a copy of charIndx because it's modified per char
+		sta tcharIndx+0
 		lda charIndx+1
-		pha
+		sta tcharIndx+1
 
 		ldy charWidth						// loop to add charWidth chars
 	cloop:
 		// Char
-		lda charIndx+0
-		sta ((tilePtr)),z
+		lda tcharIndx+0
+		sta (tilePtr),z
 		lda DrawMode
-		sta ((attribPtr)),z
+		sta (attribPtr),z
 		inz	
-		lda charIndx+1
-		sta ((tilePtr)),z
+		lda tcharIndx+1
+		sta (tilePtr),z
 		lda DrawPal
-		sta ((attribPtr)),z
+		sta (attribPtr),z
 		inz
 		
 		clc									// move to the next column's char
-		lda charIndx+0
+		lda tcharIndx+0
 		adc charStep
-		sta charIndx+0
-		lda charIndx+1
+		sta tcharIndx+0
+		lda tcharIndx+1
 		adc #$00
-		sta charIndx+1
+		sta tcharIndx+1
 
 		dey
 		bne cloop
 
-		pla
-		sta charIndx+1
-		pla
-		sta charIndx+0
+		//
+		stz PixieUseOffset,x
 
+	skip:
 		rts
 	}
 }
@@ -424,6 +351,6 @@ PixieRowAttribPtrLo:
 PixieRowAttribPtrHi:
 	.fill MAX_NUM_ROWS, $00
 
-.segment BSS "Pixie Use Count"
-PixieUseCount:
+.segment BSS "Pixie Use Offset"
+PixieUseOffset:
 	.fill MAX_NUM_ROWS, $00
