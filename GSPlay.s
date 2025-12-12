@@ -49,6 +49,8 @@ gsIniPlay: {
 	lda Tmp+1
 	jsr Layers.SetXPosHi
 
+	jsr InitPixies
+
 	rts
 }
 

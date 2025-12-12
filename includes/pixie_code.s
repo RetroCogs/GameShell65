@@ -28,6 +28,26 @@ PixieYShift:	.byte $00
 
 // ------------------------------------------------------------
 //
+InitPixies:
+{
+	RunDMAJob(JobClearTiles)
+	rts
+
+	JobClearTiles:
+		// We clear ALL tiles because if there is a sneaky $ff,$ff in there the line will stop drawing
+		DMAHeader(0, PixieWorkTiles>>20)
+		.for(var r=0; r<MAX_NUM_ROWS; r++) {
+			// Tiles
+			DMAFillJob(
+				$00,
+				PixieWorkTiles + (r * Layout1_Pixie.DataSize),
+				Layout1_Pixie.DataSize,
+				(r!=(MAX_NUM_ROWS-1)))
+		}
+}
+
+// ------------------------------------------------------------
+//
 ClearWorkPixies: 
 {
 	.var rowScreenPtr = Tmp		// 16bit
@@ -63,24 +83,24 @@ ClearWorkPixies:
 	bne !-
 
 	// Clear the working pixie data using DMA
-	RunDMAJob(JobFill)
+	RunDMAJob(JobFillA)
 
 	_set8im(8, DrawMode)
 
 	rts 
 
-JobFill:
-	// We fill ONLY the attrib0 byte with a GOTOX + TRANS token, note the 2 byte step value
-	DMAHeader(0, PixieWorkAttrib>>20)
-	DMADestStep(2, 0)
-	.for(var r=0; r<MAX_NUM_ROWS; r++) {
-		// Atrib
-		DMAFillJob(
-			$90,							// GOTOX + Transparent
-			PixieWorkAttrib + (r * Layout1_Pixie.DataSize),
-			Layout1_Pixie.DataSize / 2,
-			(r!=(MAX_NUM_ROWS-1)))
-	}
+	JobFillA:
+		// We fill ONLY the attrib0 byte with a GOTOX + TRANS token, note the 2 byte step value
+		DMAHeader(0, PixieWorkAttrib>>20)
+		DMADestStep(2, 0)
+		.for(var r=0; r<MAX_NUM_ROWS; r++) {
+			// Atrib
+			DMAFillJob(
+				$90,							// GOTOX + Transparent
+				PixieWorkAttrib + (r * Layout1_Pixie.DataSize),
+				Layout1_Pixie.DataSize / 2,
+				(r!=(MAX_NUM_ROWS-1)))
+		}
 }	
 
 // ------------------------------------------------------------
