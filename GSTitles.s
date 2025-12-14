@@ -66,7 +66,7 @@ gsUpdTitles: {
 	sta GameStateData+2
 !:
 
-//	_add16im(Camera.XScroll, 1, Camera.XScroll)
+	// _add16im(Camera.XScroll, 1, Camera.XScroll)
 
 	lda Irq.VBlankCount
 	and #$00
@@ -157,38 +157,10 @@ gsDrwTitles:
 	lda Camera.YScroll+0
 	sta PixieYShift
 	
-	// _set16im(0, DrawPosX)
-	// _set16im(16, DrawPosY)
-	// _set16im(sprFont.baseChar, DrawBaseChr)
-	// _set8im(2, DrawSChr)
-	// ldx #PIXIE_16x16
-	// jsr DrawPixie
-	// rts
-
 	DbgBord(11)
-
-	// lda System.TopBorder+0
-	// lsr
-	// lsr
-	// lsr
-	// lsr
-	// and #$0f
-	// tax
-	// lda hexTable,x
-	// sta testTxt3+0
-	// lda System.TopBorder+0
-	// and #$0f
-	// tax
-	// lda hexTable,x
-	// sta testTxt3+1
-
-	// TextSetPos($30,$08)
-	// TextSetMsgPtr(testTxt3)
-	// TextDrawSpriteMsg(true, 0, false)
 
 	lda #$50
 	sta TextPosY
-
 
 	sec
 	lda Layout.LayoutWidth+0
