@@ -1,7 +1,7 @@
 	APPNAME=startup
 	DISKNAME=GAMESH65.D81
-	PNG65=node ./build/aseparse65/png65.js
-	LDTK65=node ./build/ldtk65/ldtk65.js
+	PNG65=node ./build/parsers/png65.js
+	LDTK65=node ./build/parsers/ldtk65.js
 	JTAG=/dev/cu.usbserial-2516330596481
 	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
 	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc

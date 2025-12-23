@@ -475,14 +475,10 @@ function savePalette(indx, pal) {
     console.log("save pal: ", filename)
 
     let out = []
-    for(var r = 0; r < pal.r.length; r++) {
-        out.push(pal.r[r])
-    }
-    for(var g = 0; g < pal.g.length; g++) {
-        out.push(pal.g[g])
-    }
-    for(var b = 0; b < pal.b.length; b++) {
-        out.push(pal.b[b])
+    for(var i = 0; i < pal.r.length; i++) {
+        out.push(pal.r[i])
+        out.push(pal.g[i])
+        out.push(pal.b[i])
     }
 
     fs.writeFileSync(filename, Buffer.from(out))

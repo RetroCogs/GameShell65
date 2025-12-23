@@ -392,33 +392,51 @@ RenderNop: {
 // ------------------------------------------------------------
 //
 InitPalette: {
+	.var palPtr = Tmp1			// 16 bit
+
 	//Bit pairs = CurrPalette, TextPalette, SpritePalette, AltPalette
 	lda #%00000000 //Edit=%00, Text = %00, Sprite = %01, Alt = %00
 	sta $d070 
 
-	ldx #$00
-!:
-	.for(var p=0; p<NUM_PALETTES; p++) 
-	{
-		lda Palette + (p * $30) + $000,x
-		sta $d100 + (p * $10),x
-		lda Palette + (p * $30) + $010,x
-		sta $d200 + (p * $10),x
-		lda Palette + (p * $30) + $020,x
-		sta $d300 + (p * $10),x
-	}
+	_set16im(Palette, palPtr)
+
+	ldx #$00								// HW pal index
+
+	ldz #$00								// pal index
+
+incPalLoop:
+	phz
+
+	ldz #$00
+colLoop:
+	lda (palPtr),z							// get palette value
+	sta $d100,x								// store into HW palette
+	inz
+
+	lda (palPtr),z							// get palette value
+	sta $d200,x								// store into HW palette
+	inz
+
+	lda (palPtr),z							// get palette value
+	sta $d300,x								// store into HW palette
+	inz
 
 	inx
-	cpx #$10
-	lbne !-
+
+	cpz #$30
+	bne colLoop
+
+	_add16im(palPtr, $30, palPtr)
+
+	plz
+	inz
+	cpz #16
+	bne incPalLoop
 
 	lda #$00
 	sta $d100
-	sta $d110
 	sta $d200
-	sta $d210
 	sta $d300
-	sta $d310
 
 	rts
 }

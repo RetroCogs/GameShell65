@@ -1034,11 +1034,24 @@ async function runSpriteMapper(argv) {
         fs.writeFileSync(path.resolve(outputPath, inputName+"_pal.bin"), Buffer.from([]))
 
     } else {
-        fs.writeFileSync(path.resolve(outputPath, inputName+"_pal.bin"), Buffer.from(convertedPal.r.concat(convertedPal.g).concat(convertedPal.b)))
+        writePalette(outputPath, inputName, convertedPal)
     }
     
     
     
     //SAVE CHARS
     fs.writeFileSync(path.resolve(outputPath, inputName+"_chr.bin"), Buffer.from(charData.data))
+}
+
+function writePalette(outpath, name, pal)
+{
+    let out = []
+    for(var i = 0; i < pal.r.length; i++) {
+        out.push(pal.r[i])
+        out.push(pal.g[i])
+        out.push(pal.b[i])
+    }
+
+    //SAVE PALETTE
+    fs.writeFileSync(path.resolve(outpath, name+"_pal.bin"), Buffer.from(out))
 }
