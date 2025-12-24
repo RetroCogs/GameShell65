@@ -1,7 +1,10 @@
 	APPNAME=startup
 	DISKNAME=GAMESH65.D81
-	PNG65=node ./build/parsers/png65.js
-	LDTK65=node ./build/parsers/ldtk65.js
+	GSINC=./includes
+	GSBUILD=./build
+
+	PNG65=node $(GSBUILD)/parsers/png65.js
+	LDTK65=node $(GSBUILD)/parsers/ldtk65.js
 	JTAG=/dev/cu.usbserial-2516330596481
 	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
 	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
@@ -13,7 +16,7 @@ ifeq ($(windows), 1)
 	MEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	EMEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	ETHERLOAD=d:/PCTOOLS/etherload.exe
-	MEGATOOL=./build/megatool/megatool.exe
+	MEGATOOL=$(GSBUILD)/megatool/megatool.exe
 else
 	KICK=~/Applications/KickAss/KickAss65CE02-5.24f.jar
 	C1541=/opt/homebrew/Cellar/vice/3.8/bin/c1541
@@ -21,7 +24,7 @@ else
 	MEGA65_FTP=~/Applications/Mega65/mega65_ftp.osx
 	EMEGA65_FTP=~/Documents/MEGA65/mega65_ftp.osx
 	ETHERLOAD=~/Documents/MEGA65/etherload.osx
-	MEGATOOL=./build/megatool/macmegatool.exe
+	MEGATOOL=$(GSBUILD)/megatool/macmegatool.exe
 endif
 
 all: data datablobs code disk
@@ -45,7 +48,7 @@ datablobs:
 	$(MEGATOOL) -c sdcard/data.bin.addr
 
 code:
-	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -odir bin $(APPNAME).asm –symbolfile -bytedumpfile $(APPNAME).klist
+	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -libDir $(GSINC) -odir bin $(APPNAME).asm –symbolfile -bytedumpfile $(APPNAME).klist
 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
 	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
 

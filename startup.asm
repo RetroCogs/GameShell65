@@ -45,11 +45,11 @@
 
 // ------------------------------------------------------------
 //
-#import "includes/m65macros.s"
+#import "m65macros.s"
 
-#import "includes/layers_Functions.s"
-#import "includes/layout_Functions.s"
-#import "includes/assets_Functions.s"
+#import "layers_Functions.s"
+#import "layout_Functions.s"
+#import "assets_Functions.s"
 
 // ------------------------------------------------------------
 // Layer constants
@@ -208,14 +208,14 @@ SaveStateEnd:
 
 .print "--------"
 
-#import "includes/layers_code.s"
-#import "includes/layout_code.s"
-#import "includes/assets_code.s"
-#import "includes/system_code.s"
-#import "includes/fastLoader.s"
-#import "includes/decruncher.s"
-#import "includes/keyb_code.s"
-#import "includes/pixie_code.s"
+#import "layers_code.s"
+#import "layout_code.s"
+#import "assets_code.s"
+#import "system_code.s"
+#import "fastLoader.s"
+#import "decruncher.s"
+#import "keyb_code.s"
+#import "pixie_code.s"
 
 // ------------------------------------------------------------
 //
