@@ -1,5 +1,6 @@
 	APPNAME=startup
 	DISKNAME=GAMESH65.D81
+
 	GSINC=./includes
 	GSBUILD=./build
 
@@ -42,9 +43,7 @@ datablobs:
 		sdcard/font_chr.bin \
 		sdcard/32x32sprite_chr.bin \
 		sdcard/data.bin
-
 	$(MEGATOOL) -a sdcard/data.bin 00000000
-
 	$(MEGATOOL) -c sdcard/data.bin.addr
 
 code:
