@@ -106,13 +106,16 @@ Initialization2:
 	lda #%10000000		//Clear bit7=H640
 	trb $d031
 
-	lda #<COLOR_OFFSET	// set offset to colour ram so we can use the first 8kb for something else and $10000-$60000 is a continuous playground without the colour ram in the middle
-	sta $d064			// this causes a 1 pixel bug in the bottom right of the screen, so commenting it out again for now.
-	lda #>COLOR_OFFSET
-	sta $d065
+	// set offset to colour ram so we can use the first 8kb for something else and $10000-$60000 is a continuous playground without the colour ram in the middle
+	// this causes a 1 pixel bug in the bottom right of the screen, so commenting it out again for now.
+	VIC4_SetColorOffset(COLOR_OFFSET)
 
 	lda #%00000101		//Set bit2=FCM for chars >$ff,  bit0=16 bit char indices
 	tsb $d054
+
+    // Disable RSTDELENS
+    lda #%01000000
+    trb $d05d
 
 	rts
 }
@@ -243,8 +246,8 @@ isPal:
 
 // ------------------------------------------------------------
 //
-InitDPad: {
-
+InitDPad: 
+{
 	lda #$00
 	sta DPad+0
 	sta DPad+1
@@ -254,7 +257,8 @@ InitDPad: {
 	rts
 }
 
-UpdateDPad: {
+UpdateDPad: 
+{
 	// Scan the keyboard
 	jsr ScanKeyMatrix
 

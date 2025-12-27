@@ -8,8 +8,8 @@
 //
 // Titles State - show titles screen
 //
-gsIniCredits: {
-
+gsIniCredits: 
+{
 	lda #$00
 	sta Irq.VBlankCount
 
@@ -58,7 +58,8 @@ gsIniCredits: {
 
 // ------------------------------------------------------------
 //
-gsUpdCredits: {
+gsUpdCredits: 
+{
 	// Inc the game state timer
 	_add16im(GameStateData, 1, GameStateData)
 	lda GameStateData+0

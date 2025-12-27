@@ -10,8 +10,8 @@
 //
 // Titles State - show titles screen
 //
-gsIniPlay: {
-
+gsIniPlay: 
+{
 	lda #$00
 	sta Irq.VBlankCount
 
@@ -56,7 +56,8 @@ gsIniPlay: {
 
 // ------------------------------------------------------------
 //
-gsUpdPlay: {
+gsUpdPlay: 
+{
 	// Inc the game state timer
 	_add16im(GameStateData, 1, GameStateData)
 	lda GameStateData+0
@@ -258,11 +259,13 @@ DrawObjData:
 	lda Objs1Spr,x
 	sta DrawSChr
 
+#if USE_DBG
 	clc
 	lda $d020
 	adc #$01
 	and #$0f
 	sta $d020
+#endif 
 
 	ldx #PIXIE_32x32
 	jsr DrawPixie

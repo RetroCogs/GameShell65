@@ -9,12 +9,12 @@
 // ------------------------------------------------------------
 // Memory layout
 //
-.const COLOR_OFFSET = $0800				// Offset ColorRam to make bank $10000 contiguous
-.const COLOR_RAM = $ff80000 + COLOR_OFFSET
+.const COLOR_OFFSET 		= $0800				// Offset ColorRam to make bank $10000 contiguous
+.const COLOR_RAM 			= $ff80000 + COLOR_OFFSET
 
-.const GRAPHICS_RAM = $10000			// all bg chars / pixie data goes here
-.const PIXIEANDSCREEN_RAM = $50000		// screen ram / pixie work ram goes here
-										// must be on a $100 alignment due to RRB pixie MAP behavior
+.const GRAPHICS_RAM 		= $10000			// all bg chars / pixie data goes here
+.const PIXIEANDSCREEN_RAM 	= $50000			// screen ram / pixie work ram goes here
+												// must be on a $100 alignment due to RRB pixie MAP behavior
 
 // --------------
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
@@ -30,6 +30,7 @@
 
 // --------------
 // Ensure PixieWorkRam is on a $100 alignemt due to RRB pixie MAP behavior
+//
 .segmentdef PixieWorkRam [start=PIXIEANDSCREEN_RAM, max=PIXIEANDSCREEN_RAM+$ffff, virtual]
 .segmentdef ScreenRam [startAfter="PixieWorkRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
 .segmentdef MapRam [startAfter="ScreenRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
@@ -159,8 +160,6 @@
 //
 .segment Zeropage "Main zeropage"
 
-TotalTime:		.byte $00
-
 Tmp:			.word $0000,$0000		// General reusable data (Don't use in IRQ)
 Tmp1:			.word $0000,$0000
 Tmp2:			.word $0000,$0000
@@ -169,8 +168,6 @@ Tmp4:			.word $0000,$0000
 Tmp5:			.word $0000,$0000
 Tmp6:			.word $0000,$0000
 Tmp7:			.word $0000,$0000
-
-.print "TotalTime = $" + toHexString(TotalTime)
 
 // ------------------------------------------------------------
 //
@@ -234,11 +231,11 @@ Entry:
 {
 	jsr System.Initialization1
 
+	// Init the raster IRQ
+	//
  	sei
 
-	lda #$7f
-    sta $dc0d
-    sta $dd0d
+	disableCIAInterrupts()
 
     lda $dc0d
     lda $dd0d
@@ -286,17 +283,10 @@ Entry:
 	jsr InitPalette
 	jsr InitBGMap
 
-	TextSetPos(0,0)
-//	TextPrintMsg(imessage)
-
 	// Setup the initial game state
 	lda #GStateTitles
 	sta RequestGameState
 	jsr SwitchGameStates
-
-    // Disable RSTDELENS
-    lda #%01000000
-    trb $d05d
 
     // set the interrupt to line bottom position
     jsr Irq.SetIRQBotPos
@@ -370,15 +360,13 @@ skipEnable:
 
 	DbgBord(0)
 
-	lda $d012
-	sta TotalTime
-
 	jmp mainloop
 }
 
 // ------------------------------------------------------------
 //
-SwitchGameStates: {
+SwitchGameStates: 
+{
 	sta GameState
 	asl
 	tax
@@ -388,13 +376,15 @@ SwitchGameStates: {
 
 // ------------------------------------------------------------
 //
-RenderNop: {
+RenderNop: 
+{
 	rts
 }
 
 // ------------------------------------------------------------
 //
-InitPalette: {
+InitPalette: 
+{
 	.var palPtr = Tmp1			// 16 bit
 
 	//Bit pairs = CurrPalette, TextPalette, SpritePalette, AltPalette

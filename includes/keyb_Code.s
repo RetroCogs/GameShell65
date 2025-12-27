@@ -7,7 +7,8 @@ ScanResult:
 // ------------------------------------------------------------
 //
 .segment Code "Keyb"
-ScanKeyMatrix: {
+ScanKeyMatrix: 
+{
 	ldx $dc02
 	ldy $dc03
 	phx
@@ -25,7 +26,9 @@ ScanKeyMatrix: {
     ldy $dc01
     sty ScanResult+0
     sec
-    .for (var i = 1 ; i < 8 ; i++) {
+
+    .for (var i = 1 ; i < 8 ; i++) 
+	{
         rol
         sta $dc00
         ldy $dc01
