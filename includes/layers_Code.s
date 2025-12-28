@@ -259,7 +259,8 @@ UpdateData:
 		rts
 	}
 
-	UpdateLayer: {
+	UpdateLayer: 
+	{
 		sta lineOffs
 		sty bgDesc+0
 		stz bgDesc+1

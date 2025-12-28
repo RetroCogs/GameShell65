@@ -6,8 +6,8 @@
 //
 // Titles State - show titles screen
 //
-gsIniTitles: {
-
+gsIniTitles: 
+{
 	lda #$00
 	sta Irq.VBlankCount
 
@@ -49,7 +49,8 @@ gsIniTitles: {
 
 // ------------------------------------------------------------
 //
-gsUpdTitles: {
+gsUpdTitles: 
+{
 	// Inc the game state timer
 	_add16im(GameStateData, 1, GameStateData)
 	lda GameStateData+0
@@ -198,7 +199,8 @@ gsDrwTitles:
 
 // ------------------------------------------------------------
 //
-RenderLayout1BG: {
+RenderLayout1BG: 
+{
 	// 
 	ldx #Layout1_BG.id
 	ldy #<BgMap1

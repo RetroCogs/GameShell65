@@ -13,7 +13,8 @@ CamVelY:		.word $0000
 // ------------------------------------------------------------
 //
 .segment Code "Camera"
-Init: {
+Init: 
+{
 	_set16im(0, XScroll)
 	_set16im(0, YScroll)
 
