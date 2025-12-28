@@ -9,7 +9,8 @@
 	PIXIE_32x8,
 	PIXIE_32x16,
 	PIXIE_32x24,
-	PIXIE_32x32
+	PIXIE_32x32,
+	PIXIE_48x48
 }
 
 .segment Zeropage "Pixie ZP"
@@ -109,9 +110,9 @@ yShiftTable:	.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)
 yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
 
 // Number of chars wide and high for each of the pixie layouts
-pixieLayoutH:	.byte 1,2,3,4,1,2,3,4
-pixieLayoutW:	.byte 1,1,1,1,2,2,2,2
-pixieLayoutB:	.byte 4,4,4,4,6,6,6,6
+pixieLayoutH:	.byte 1,2,3,4,1,2,3,4,6
+pixieLayoutW:	.byte 1,1,1,1,2,2,2,2,3
+pixieLayoutB:	.byte 4,4,4,4,6,6,6,6,8
 
 DrawPixie:
 {
