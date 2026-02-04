@@ -1,3 +1,6 @@
+build/RCPacker/rcPacker
+build/RCPacker/*.o
+
 bin/Startup.prg
 bin/Startup.sym
 bin/Startup.vs
