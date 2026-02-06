@@ -1,7 +1,7 @@
 #include "cruncher.h"
 #include <stdio.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define max_offs       0x129f // 12bit offset limit. $129f
 #define max_offs_short 0x054f // 10bit offset limit. $054f
@@ -10,7 +10,8 @@ uint offsTab[4] = {5,2,2,3};
 uint offsTabShort[4] = {4,2,2,2};
 
 byte *ibuf;
-byte obuf[memSize];
+byte *obuf;
+
 uint ibufSize;
 int get; //points to in[]
 uint put; //points to out[]
@@ -243,6 +244,8 @@ bool crunch(File *aSource, File *aTarget, uint startAdress)
   byte *target;
   bool attachDecr;
 
+  obuf = malloc(memSize);
+
   errorFlag = false;
   attachDecr = (startAdress == 0 ? false : true);
 
@@ -332,6 +335,7 @@ bool crunch(File *aSource, File *aTarget, uint startAdress)
   }
 
   free(ibuf);
+  free(obuf);
 
   return true;
 }

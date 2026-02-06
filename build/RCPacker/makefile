@@ -23,6 +23,9 @@ HEADERS = $(wildcard *.h)
 $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
 
+run: $(TARGET)
+	./$(TARGET) ./FirstShotPAL.bin
+
 clean:
 	-rm -f *.o
 	-rm -f $(TARGET)
