@@ -1,22 +1,19 @@
-#ifndef _BB_h_
-#define _BB_h_
-
-#include <stdlib.h>
-#include <string.h>
+#ifndef _bb_h_
+#define _bb_h_
 
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
 
 #ifndef byte
-#define byte unsigned char
+typedef unsigned char byte;
 #endif
 #ifndef uint
-#define uint unsigned int
+typedef unsigned int uint;
 #endif
 
 typedef enum { false = 0, true = 1 } bool;
 
 #define memSize 65536
 
-#endif // _BB_h_
+#endif // _bb_h_

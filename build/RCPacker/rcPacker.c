@@ -22,7 +22,10 @@ int main(int argc, char * argv[])
         File myFile;
         File myBBFile;
         char* fileName;
-        uint startAdress = 0;
+        bool isExecutable = false;
+        bool isRelocated = false;
+          bool clipStartAddress = false;
+        uint address = 0;
 
         fileName = argv[1];
 
@@ -31,12 +34,12 @@ int main(int argc, char * argv[])
             return -1;
         }
 
-        if(!crunch(&myFile, &myBBFile, startAdress)) {
+        if(!crunch(&myFile, &myBBFile, address, isExecutable, isRelocated)) {
             freeFile(&myFile);
             return -1;
         }
 
-        if(!writeFile(&myBBFile, myFile.name)) {
+          if(!writeFile(&myBBFile, myFile.name, clipStartAddress == false ? 0 : 2)) {
             printf("Error (B-2): Write file \"%s\", aborting.\n", myBBFile.name);
         }
 

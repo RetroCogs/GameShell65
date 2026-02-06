@@ -1,4 +1,6 @@
 #include "file.h"
+#include <stdlib.h>
+#include <string.h>
 
 void freeFile(File *aFile)
 {
@@ -39,11 +41,14 @@ bool readFile(File *aFile, const char *fileName)
   return true;
 }
 
-bool writeFile(File *aFile, const char *fileName)
+bool writeFile(File *aFile, const char *fileName, const size_t startOffset)
 {
   FILE *fp = NULL;
   size_t length;
-  char *ext;
+
+  if (startOffset >= aFile->size) {
+    return false;
+  }
 
   length = strlen(fileName);
   aFile->name = (char *)malloc(length + 4);
@@ -53,14 +58,14 @@ bool writeFile(File *aFile, const char *fileName)
   }
 
   strncpy(aFile->name, fileName, length);
-  strncpy(aFile->name + length, ".bb\0", 4);
+  strncpy(aFile->name + length, ".b2\0", 4);
 
   fp = fopen(aFile->name, "wb");
   if(fp == NULL) {
     return false;
   }
 
-  if(fwrite(aFile->data, 1, aFile->size, fp) != aFile->size) {
+  if(fwrite(aFile->data + startOffset, 1, aFile->size - startOffset, fp) != aFile->size - startOffset) {
     fclose(fp);
     return false;
   }
