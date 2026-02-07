@@ -21,7 +21,7 @@ HEADERS = $(wildcard *.h)
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
+	$(CC) $(OBJECTS) -Wall -std=c11 $(LIBS) -o $@
 
 run: $(TARGET)
 	./$(TARGET) ./FirstShotPAL.bin
