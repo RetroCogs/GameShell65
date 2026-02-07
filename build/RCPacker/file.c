@@ -8,12 +8,27 @@ void freeFile(File *aFile)
   free(aFile->data);
 }
 
+char *mystrdup(const char *str)
+{
+  // NOTE: Using manual malloc+strcpy instead of strdup()
+  // strdup() has a bug in glibc 2.39 (Ubuntu 24.04) that causes it to
+  // return invalid addresses when called in this context.
+  // This manual approach is more portable and works on all platforms.
+  char *dup = (char *)malloc(strlen(str) + 1);
+  if (dup == NULL) {
+    return false;
+  }
+  strcpy(dup, str);
+
+  return dup;
+}
+
 bool readFile(File *aFile, const char *fileName)
 {
   FILE *fp = NULL;
   struct stat fileStatus;
 
-  aFile->name = (char *)strdup(fileName);
+  aFile->name = mystrdup(fileName);
 
   if(stat(aFile->name, &fileStatus) == -1) {
     return false;

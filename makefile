@@ -13,7 +13,7 @@
 ifeq ($(windows), 1)
 	KICK=./build/KickAss65CE02-5.24f.jar
 	C1541=./build/c1541/c1541.exe
-	XEMU=h:/xemu/xmega65.exe
+	XEMU=c:/_devMega65/xemu/xmega65.exe
 	MEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	EMEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	ETHERLOAD=d:/PCTOOLS/etherload.exe
