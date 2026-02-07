@@ -16,7 +16,7 @@ char *mystrdup(const char *str)
   // This manual approach is more portable and works on all platforms.
   char *dup = (char *)malloc(strlen(str) + 1);
   if (dup == NULL) {
-    return false;
+    return NULL;
   }
   strcpy(dup, str);
 
