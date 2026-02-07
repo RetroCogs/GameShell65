@@ -7,7 +7,8 @@ TextEffect:		.byte $00
 
 .segment Code "Pixie Text"
 
-.macro TextSetPos(x,y) {
+.macro TextSetPos(x,y) 
+{
 	lda #<x
 	sta.zp TextPosX+0
 	lda #>x
@@ -16,14 +17,16 @@ TextEffect:		.byte $00
 	sta.zp TextPosY
 }
 
-.macro TextSetMsgPtr(message) {
+.macro TextSetMsgPtr(message) 
+{
     lda #<message
     sta TextPtr+0
     lda #>message
     sta TextPtr+1
 }
 
-.macro TextDrawSpriteMsg(center, sinoffs, applysin) {
+.macro TextDrawSpriteMsg(center, sinoffs, applysin) 
+{
 	.if (applysin)
 	{
 	    clc
@@ -57,7 +60,8 @@ chrWide:
 	.byte $08,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
 	.byte $10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10,$10
 
-SprCenterXPos: {
+SprCenterXPos: 
+{
 	lda #$00
 	sta TextPosX+0
 	sta TextPosX+1
@@ -102,7 +106,8 @@ endtxt:
 	rts
 }
 
-SprPrintMsg: {
+SprPrintMsg: 
+{
 	lda #$00
 	sta DrawSChr
 
@@ -118,6 +123,8 @@ SprPrintMsg: {
 
  	lda TextPosY
  	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
 
  	ldy #$00
 
@@ -146,13 +153,19 @@ oloop:
 	ror
 	adc TextPosY
 	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
+
 	bra _dodraw
 
 _noeffect:
 	lda TextPosY
 	sta DrawPosY+0
+	lda #$00
+	sta DrawPosY+1
 
 _dodraw:
+	ldx #PIXIE_16x16
  	jsr DrawPixie
 
  	lda mult2:#$00

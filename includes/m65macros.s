@@ -17,7 +17,8 @@
 
 // ------------------------------------------------------------
 //
-.macro BasicUpstart65(addr) {
+.macro BasicUpstart65(addr) 
+{
 * = $2001 "BasicUpstart65"
 
 	.var addrStr = toIntString(addr)
@@ -34,26 +35,30 @@ end:
 	.byte $00,$00	//End of basic terminators
 }
 
-.macro DbgBord(col) {
+.macro DbgBord(col) 
+{
 #if USE_DBG
 	lda #col
 	sta $d020
 #endif
 }
 
-.macro DbgIncBord() {
+.macro DbgIncBord() 
+{
 #if USE_DBG
 	inc $d020
 #endif
 }
 
-.macro DbgDecBord() {
+.macro DbgDecBord() 
+{
 #if USE_DBG
 	dec $d020
 #endif
 }
 
-.macro WaitSpace() {
+.macro WaitSpace() 
+{
 keywait:
 	clc
 	lda $d020
@@ -71,28 +76,6 @@ keywait:
 	jmp keywait
 	
 start:
-}
-
-.macro mapHi(source, target, blocks) {
-	.var sourceMB = (source & $ff00000) >> 20
-	.var sourceOffset = ((source & $00fff00) - target)
-	.var sourceOffHi = sourceOffset >> 16
-	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitHi = blocks << 4
-
-	ldy #sourceOffLo
-	ldz #[sourceOffHi + bitHi]
-}
-
-.macro mapLo(source, target, blocks) {
-	.var sourceMB = (source & $ff00000) >> 20
-	.var sourceOffset = ((source & $00fff00) - target)
-	.var sourceOffHi = sourceOffset >> 16
-	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitLo = blocks << 4
-
-	lda #sourceOffLo
-	ldx #[sourceOffHi + bitLo]
 }
 
 // _set8im - store an 8bit constant to a memory location
@@ -375,6 +358,34 @@ start:
 	sta dst+2
 }
 
+// _and24im - and a 24bit constant with a memory location, store in result
+.macro _and24im(src, value, dst)
+{
+	lda src+0
+	and #<value
+	sta dst+0
+	lda src+1
+	and #>value
+	sta dst+1
+	lda src+2
+	and #[value >> 16]
+	sta dst+2
+}
+
+// _and24 - and a 24bit value with a memory location, store in result
+.macro _and24(src, value, dst)
+{
+	lda src+0
+	and value+0
+	sta dst+0
+	lda src+1
+	and value+1
+	sta dst+1
+	lda src+2
+	and value+2
+	sta dst+2
+}
+
 .macro _half24(srcdst)
 {
 	lda srcdst+2
@@ -430,6 +441,24 @@ start:
 	sta dst+3
 }
 
+// _add32 - add a 32bit value to a memory location, store in result
+.macro _add32(src, value, dst)
+{
+	clc
+	lda src+0
+	adc value
+	sta dst+0
+	lda src+1
+	adc value+1
+	sta dst+1
+	lda src+2
+	adc value+2
+	sta dst+2
+	lda src+3
+	adc value+3
+	sta dst+3
+}
+
 // _sub32im - sub a 32bit constant to a memory location, store in result
 .macro _sub32im(src, value, dst)
 {
@@ -449,12 +478,14 @@ start:
 }
 
 
-.macro enable40Mhz() {
+.macro enable40Mhz() 
+{
 	lda #$41
 	sta $00 //40 Mhz mode
 }
 
-.macro enableVIC3Registers () {
+.macro enableVIC3Registers () 
+{
 	lda #$00
 	tax 
 	tay 
@@ -468,7 +499,8 @@ start:
 	sta $d02f
 }
 
-.macro enableVIC4Registers () {
+.macro enableVIC4Registers () 
+{
 	lda #$00
 	tax 
 	tay 
@@ -482,14 +514,16 @@ start:
 	sta $d02f
 }
 
-.macro disableCIAInterrupts() {
+.macro disableCIAInterrupts() 
+{
 	//Disable CIA interrupts
 	lda #$7f
 	sta $dc0d
 	sta $dd0d
 }
 
-.macro disableC65ROM() {
+.macro disableC65ROM() 
+{
 	//Disable C65 rom protection using
 	//hypervisor trap (see mega65 manual)	
 	//lda #$70			// LV commented out, because decruncher is already disabling c65 rom protection
@@ -500,41 +534,28 @@ start:
 	trb $d030
 }
 
-.macro mapMemory(source, target) {
+.macro mapHi(source, target, blocks) 
+{
 	.var sourceMB = (source & $ff00000) >> 20
 	.var sourceOffset = ((source & $00fff00) - target)
 	.var sourceOffHi = sourceOffset >> 16
 	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
-	.var bitLo = pow(2, (((target) & $ff00) >> 12) / 2) << 4
-	.var bitHi = pow(2, (((target-$8000) & $ff00) >> 12) / 2) << 4
-	
-	.if(target<$8000) {
-		lda #sourceMB
-		ldx #$0f
-		ldy #$00
-		ldz #$00
-	} else {
-		lda #$00
-		ldx #$00
-		ldy #sourceMB
-		ldz #$0f
-	}
-	map 
+	.var bitHi = blocks << 4
 
-	//Set offset map
-	.if(target<$8000) {
-		lda #sourceOffLo
-		ldx #[sourceOffHi + bitLo]
-		ldy #$00
-		ldz #$00
-	} else {
-		lda #$00
-		ldx #$00
-		ldy #sourceOffLo
-		ldz #[sourceOffHi + bitHi]
-	}	
-	map 
-	eom
+	ldy #sourceOffLo
+	ldz #[sourceOffHi + bitHi]
+}
+
+.macro mapLo(source, target, blocks) 
+{
+	.var sourceMB = (source & $ff00000) >> 20
+	.var sourceOffset = ((source & $00fff00) - target)
+	.var sourceOffHi = sourceOffset >> 16
+	.var sourceOffLo = (sourceOffset & $0ff00 ) >> 8
+	.var bitLo = blocks << 4
+
+	lda #sourceOffLo
+	ldx #[sourceOffHi + bitLo]
 }
 
 .macro unmapMemory()
@@ -547,7 +568,8 @@ start:
 	eom
 }
 
-.macro VIC4_SetCharLocation(addr) {
+.macro VIC4_SetCharLocation(addr) 
+{
 	lda #[addr & $ff]
 	sta $d068
 	lda #[[addr & $ff00]>>8]
@@ -556,7 +578,16 @@ start:
 	sta $d06a
 }
 
-.macro VIC4_SetScreenLocation(addr) {
+.macro VIC4_SetColorOffset(offset) 
+{
+	lda #<offset
+	sta $d064
+	lda #>offset
+	sta $d065
+}
+
+.macro VIC4_SetScreenLocation(addr) 
+{
 	lda #[addr & $ff]
 	sta $d060
 	lda #[[addr & $ff00]>>8]
@@ -569,14 +600,16 @@ start:
 	sta $d063
 }
 
-.macro VIC4_SetRowWidth(rowWidth) { 
+.macro VIC4_SetRowWidth(rowWidth) 
+{ 
 	lda #<rowWidth
 	sta $d058
 	lda #>rowWidth
 	sta $d059
 }
 
-.macro VIC4_SetNumCharacters(numChrs) {
+.macro VIC4_SetNumCharacters(numChrs) 
+{
 	lda #<numChrs
 	sta $d05e
 	lda $d063
@@ -585,65 +618,97 @@ start:
 	sta $d063
 }
 
-.macro VIC4_SetNumRows(numRows) {
+.macro VIC4_SetNumRows(numRows) 
+{
 	lda #numRows
 	sta $d07b 
 }
 
-.macro VIC4_SetTopBorder(value) {
+.macro VIC4_SetTopBorder(value) 
+{
 	lda #<value
 	sta $d048
 	lda #(>value)&$0f
 	sta $d049
 }
 
-.macro VIC4_SetBottomBorder(value) {
+.macro VIC4_SetBottomBorder(value) 
+{
 	lda #<value
 	sta $d04a
 	lda #(>value)&$0f
 	sta $d04b
 }
 
-.macro VIC4_SetCharYStart(value) {
+.macro VIC4_SetCharYStart(value) 
+{
 	lda #<value
 	sta $d04e
 	lda #(>value)&$0f
 	sta $d04f
 }
 
-.pseudocommand mov src:tar {
+.pseudocommand mov src:tar 
+{
 	lda src
 	sta tar
 }
 
-.macro RunDMAJob(JobPointer) {
+.macro RunDMAJobHi(JobPointer) 
+{
 	lda #[JobPointer >> 16]
 	sta $d702
 	sta $d704
 	lda #>JobPointer
 	sta $d701
+}
+
+.macro RunDMAJobLo(JobPointer) 
+{
 	lda #<JobPointer
 	sta $d705
 }
-.macro DMAHeader(SourceBank, DestBank) {
+
+.macro RunDMAJob(JobPointer) 
+{
+	RunDMAJobHi(JobPointer)
+	RunDMAJobLo(JobPointer)
+}
+
+.macro DMAHeader(SourceBank, DestBank) 
+{
 	.byte $0A // Request format is F018A
 	.byte $80, SourceBank
 	.byte $81, DestBank
 }
-.macro DMAStep(SourceStep, SourceStepFractional, DestStep, DestStepFractional) {
+
+.macro DMAStep(SourceStep, SourceStepFractional, DestStep, DestStepFractional) 
+{
 	.byte $82, SourceStepFractional
 	.byte $83, SourceStep
 	.byte $84, DestStepFractional
 	.byte $85, DestStep		
 }
-.macro DMADisableTransparency() {
+
+.macro DMADestStep(DestStep, DestStepFractional) 
+{
+	.byte $84, DestStepFractional
+	.byte $85, DestStep		
+}
+
+.macro DMADisableTransparency() 
+{
 	.byte $06
 }
-.macro DMAEnableTransparency(TransparentByte) {
+
+.macro DMAEnableTransparency(TransparentByte) 
+{
 	.byte $07 
 	.byte $86, TransparentByte
 }
-.macro DMACopyJob(Source, Destination, Length, Chain, Backwards) {
+
+.macro DMACopyJob(Source, Destination, Length, Chain, Backwards) 
+{
 	.byte $00 //No more options
 	.if(Chain) {
 		.byte $04 //Copy and chain
@@ -661,7 +726,7 @@ start:
 
 	//byte 04
 	.word Source & $ffff
-	.byte [Source >> 16] + backByte
+	.byte [[Source >> 16] & $0f] + backByte
 
 	//byte 07
 	.word Destination & $ffff
@@ -671,8 +736,8 @@ start:
 	}
 }
 
-
-.macro DMAFillJob(SourceByte, Destination, Length, Chain) {
+.macro DMAFillJob(SourceByte, Destination, Length, Chain) 
+{
 	.byte $00 //No more options
 	.if(Chain) {
 		.byte $07 //Fill and chain
@@ -692,8 +757,8 @@ start:
 	}
 }
 
-
-.macro DMAMixJob(Source, Destination, Length, Chain, Backwards) {
+.macro DMAMixJob(Source, Destination, Length, Chain, Backwards) 
+{
 	.byte $00 //No more options
 	.if(Chain) {
 		.byte $04 //Mix and chain
@@ -717,7 +782,8 @@ start:
 	}
 }
 
-.macro waitEOLine() {
+.macro waitEOLine() 
+{
     // wait for end of scan line
     lda $d052
 !:
@@ -725,20 +791,23 @@ start:
     beq !-
 }	
 
-.macro infLoop() {
+.macro infLoop() 
+{
 !:
 	inc $d020
 	bra !-
 }
 
-.macro M65_SaveRegisters() {
+.macro M65_SaveRegisters() 
+{
     pha 
     phx 
     phy 
     phz
 }
 
-.macro M65_RestoreRegisters() {
+.macro M65_RestoreRegisters() 
+{
     plz 
     ply 
     plx 

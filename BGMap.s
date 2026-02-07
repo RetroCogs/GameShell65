@@ -6,19 +6,19 @@ BgMap1:
 .dword 	BGMap0TileRAM       // 32bit pointer to decompressed tile ram
 .dword 	BGMap0AttribRAM     // 32bit pointer to decompressed attrib ram
 .word 	BG0ROWSIZE          // 16bit size of bytes per line
-.word	$0020               // 16bit number of 8 pixel height chars to wrap on
+.word	BG0NUMROWS          // 16bit number of 8 pixel height chars to wrap on
 
 BgMap2:
 .dword 	BGMap1TileRAM       // 32bit pointer to decompressed tile ram
 .dword 	BGMap1AttribRAM     // 32bit pointer to decompressed attrib ram
 .word 	BG1ROWSIZE          // 16bit size of bytes per line
-.word	$0040               // 16bit number of 8 pixel height chars to wrap on
+.word	BG1NUMROWS          // 16bit number of 8 pixel height chars to wrap on
 
 BgMap3:
 .dword 	BGMap2TileRAM       // 32bit pointer to decompressed tile ram
 .dword 	BGMap2AttribRAM     // 32bit pointer to decompressed attrib ram
 .word 	BG2ROWSIZE          // 16bit size of bytes per line
-.word	$0040               // 16bit number of 8 pixel height chars to wrap on
+.word	BG2NUMROWS          // 16bit number of 8 pixel height chars to wrap on
 
 // ------------------------------------------------------------
 //

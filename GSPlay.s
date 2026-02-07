@@ -10,8 +10,8 @@
 //
 // Titles State - show titles screen
 //
-gsIniPlay: {
-
+gsIniPlay: 
+{
 	lda #$00
 	sta Irq.VBlankCount
 
@@ -49,12 +49,15 @@ gsIniPlay: {
 	lda Tmp+1
 	jsr Layers.SetXPosHi
 
+	jsr InitPixies
+
 	rts
 }
 
 // ------------------------------------------------------------
 //
-gsUpdPlay: {
+gsUpdPlay: 
+{
 	// Inc the game state timer
 	_add16im(GameStateData, 1, GameStateData)
 	lda GameStateData+0
@@ -161,8 +164,6 @@ _not_fire:
 //
 gsDrwPlay: 
 {
-	_set8im($0f, DrawPal)
-
 	jsr DrawObjData
 
 	rts
@@ -229,17 +230,23 @@ UpdateObjData:
 //
 DrawObjData:
 {
-	lda #$00
-	sta DrawPosY+1
+	_set16im(sprite32x32Chars.baseChar, DrawBaseChr)			// Start charIndx with first pixie char
 
-	_set16im((sprFont.baseChar), DrawBaseChr)			// Start charIndx with first pixie char
+	_set8im((PAL_SPR << 4) | $0f, DrawPal)
 
 	// Add Objs into the work ram here
 	//
 	ldx #$00
 !:
+	phx
+
+	sec
 	lda Objs1PosYLo,x
+	sbc #$20
 	sta DrawPosY+0
+	lda #$00
+	sbc #$00
+	sta DrawPosY+1
 
 	sec
 	lda Objs1PosXLo,x
@@ -252,8 +259,18 @@ DrawObjData:
 	lda Objs1Spr,x
 	sta DrawSChr
 
+#if USE_DBG
+	clc
+	lda $d020
+	adc #$01
+	and #$0f
+	sta $d020
+#endif 
+
+	ldx #PIXIE_32x32
 	jsr DrawPixie
 
+	plx
 	inx
 	cpx #NUM_OBJS1
 	bne !-
@@ -263,6 +280,9 @@ DrawObjData:
 
 // ------------------------------------------------------------
 //
+initXVel:	.word $ffff,$0001
+initYVel:	.byte $fe,$ff,$01,$02
+
 InitObjData:
 {
     .var xpos = Tmp       // 16bit
@@ -282,29 +302,30 @@ iloop1:
 	sta Objs1PosXHi,x
 	lda ypos
 	sta Objs1PosYLo,x
-	lda #1
-	sta Objs1VelY,x
 
 	txa
-	and #$01
+	and #$03
 	clc
-	adc #$1e
+	adc #$00
+	asl
+	asl
 	asl
 	sta Objs1Spr,x
 
 	txa
 	and #$01
-	bne ip1
-	lda #$ff
+	asl
+	tay
+	lda initXVel+0,y
 	sta Objs1VelXLo,x
+	lda initXVel+1,y
 	sta Objs1VelXHi,x
-	bra id1
-ip1:
-	lda #$01
-	sta Objs1VelXLo,x
-	lda #$00
-	sta Objs1VelXHi,x
-id1:
+
+	txa
+	and #$03
+	tay
+	lda initYVel,y
+	sta Objs1VelY,x
 
 	_add16im(xpos, -28, xpos)
 	_and16im(xpos, $1ff, xpos)

@@ -1,10 +1,11 @@
 // ------------------------------------------------------------
 //
-.macro WaitVblank() {
+.macro WaitVblank() 
+{
 	// Wait for IRQ before disabling the screen
-	lda Irq.VBlankCount
+	lda.zp Irq.VBlankCount
 !:
-	cmp Irq.VBlankCount
+	cmp.zp Irq.VBlankCount
 	beq !-
 }
 
@@ -20,7 +21,8 @@ VBlankCount:	.byte $00
 //
 .segment Code "Irq code"
 
-SetIRQBotPos: {
+SetIRQBotPos: 
+{
 	// 
     // set the interrupt position
     lda System.IRQBotPos+0

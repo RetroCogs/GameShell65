@@ -129,7 +129,7 @@ UpdateScrollPositions:
 	lda Layers.LogOffsHi,x
 	sta gotoOffs+1
 
-    _set32im(SCREEN_RAM, tile_ptr)
+    _set32im(ScreenRam, tile_ptr)
     _add16(tile_ptr, gotoOffs, tile_ptr)
     _set32im(COLOR_RAM, attrib_ptr)
     _add16(attrib_ptr, gotoOffs, attrib_ptr)
@@ -221,7 +221,7 @@ UpdateData:
 		.var dst_attrib_ptr = Tmp1		// 32bit
 		.var chrOffs = Tmp2				// 16bit
 
-		_set32im(SCREEN_RAM, dst_tile_ptr)
+		_set32im(ScreenRam, dst_tile_ptr)
 		_set32im(COLOR_RAM, dst_attrib_ptr)
 
 		// get the selected layout's last layer
@@ -259,7 +259,8 @@ UpdateData:
 		rts
 	}
 
-	UpdateLayer: {
+	UpdateLayer: 
+	{
 		sta lineOffs
 		sty bgDesc+0
 		stz bgDesc+1
@@ -467,11 +468,11 @@ UpdateData:
 		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
 		lda #$00
 		sta tileSourceBank
-		lda #SCREEN_RAM>>20
+		lda #PIXIEANDSCREEN_RAM>>20
 		sta tileDestBank
 		lda src_tile_ptr+2
 		sta tileSource+2
-		lda #[SCREEN_RAM >> 16]
+		lda #[PIXIEANDSCREEN_RAM >> 16]
 		and #$0f
 		sta tileDest+2
 
@@ -490,11 +491,13 @@ UpdateData:
 		//
 		_mul16(src_y_offset, src_x_size, src_tile_ptr, tileSource)
 		_add16(tileSource, src_x_offset, tileSource)
-		_add16im(dst_offset, SCREEN_RAM, tileDest)
+		_add16im(dst_offset, ScreenRam, tileDest)
+
+		RunDMAJobHi(TileJob)
 
 		ldz #$00
 	!tloop:
-		RunDMAJob(TileJob)
+		RunDMAJobLo(TileJob)
 
 		_add16(tileSource, src_x_size, tileSource)
 		_add16(tileDest, Layout.LogicalRowSize, tileDest)
@@ -509,9 +512,11 @@ UpdateData:
 		_add16(attribSource, src_x_offset, attribSource)
 		_add16im(dst_offset, COLOR_RAM, attribDest)
 
+		RunDMAJobHi(AttribJob)
+
 		ldz #$00
 	!aloop:
-		RunDMAJob(AttribJob)
+		RunDMAJobLo(AttribJob)
 
 		_add16(attribSource, src_x_size, attribSource)
 		_add16(attribDest, Layout.LogicalRowSize, attribDest)

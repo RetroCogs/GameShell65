@@ -6,8 +6,8 @@
 //
 // Titles State - show titles screen
 //
-gsIniTitles: {
-
+gsIniTitles: 
+{
 	lda #$00
 	sta Irq.VBlankCount
 
@@ -42,12 +42,15 @@ gsIniTitles: {
 	lda Tmp+1
 	jsr Layers.SetXPosHi
 
+	jsr InitPixies
+
 	rts
 }
 
 // ------------------------------------------------------------
 //
-gsUpdTitles: {
+gsUpdTitles: 
+{
 	// Inc the game state timer
 	_add16im(GameStateData, 1, GameStateData)
 	lda GameStateData+0
@@ -64,7 +67,7 @@ gsUpdTitles: {
 	sta GameStateData+2
 !:
 
-//	_add16im(Camera.XScroll, 1, Camera.XScroll)
+	// _add16im(Camera.XScroll, 1, Camera.XScroll)
 
 	lda Irq.VBlankCount
 	and #$00
@@ -155,37 +158,10 @@ gsDrwTitles:
 	lda Camera.YScroll+0
 	sta PixieYShift
 	
-	// _set16im(0, DrawPosX)
-	// _set16im(16, DrawPosY)
-	// _set16im(sprFont.baseChar, DrawBaseChr)
-	// _set8im(2, DrawSChr)
-	// jsr DrawPixie
-	// rts
-
 	DbgBord(11)
-
-	// lda System.TopBorder+0
-	// lsr
-	// lsr
-	// lsr
-	// lsr
-	// and #$0f
-	// tax
-	// lda hexTable,x
-	// sta testTxt3+0
-	// lda System.TopBorder+0
-	// and #$0f
-	// tax
-	// lda hexTable,x
-	// sta testTxt3+1
-
-	// TextSetPos($30,$08)
-	// TextSetMsgPtr(testTxt3)
-	// TextDrawSpriteMsg(true, 0, false)
 
 	lda #$50
 	sta TextPosY
-
 
 	sec
 	lda Layout.LayoutWidth+0
@@ -223,7 +199,8 @@ gsDrwTitles:
 
 // ------------------------------------------------------------
 //
-RenderLayout1BG: {
+RenderLayout1BG: 
+{
 	// 
 	ldx #Layout1_BG.id
 	ldy #<BgMap1

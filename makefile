@@ -1,9 +1,15 @@
 	APPNAME=startup
 	DISKNAME=GAMESH65.D81
-	PNG65=node ./build/aseparse65/png65.js
-	LDTK65=node ./build/ldtk65/ldtk65.js
+
+	GSINC=./includes
+	GSBUILD=./build
+
+	PNG65=node $(GSBUILD)/parsers/png65.js
+	LDTK65=node $(GSBUILD)/parsers/ldtk65.js
 	JTAG=/dev/cu.usbserial-2516330596481
-	
+	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
+	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
+
 ifeq ($(windows), 1)
 	KICK=./build/KickAss65CE02-5.24f.jar
 	C1541=./build/c1541/c1541.exe
@@ -11,9 +17,7 @@ ifeq ($(windows), 1)
 	MEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	EMEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	ETHERLOAD=d:/PCTOOLS/etherload.exe
-	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
-	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
-	MEGATOOL=./build/megatool/megatool.exe
+	MEGATOOL=$(GSBUILD)/megatool/megatool.exe
 else
 	KICK=./build/KickAss65CE02-5.24f.jar
 	C1541=/opt/homebrew/Cellar/vice/3.8/bin/c1541
@@ -21,9 +25,7 @@ else
 	MEGA65_FTP=~/Applications/Mega65/mega65_ftp.osx
 	EMEGA65_FTP=~/Documents/MEGA65/mega65_ftp.osx
 	ETHERLOAD=~/Documents/MEGA65/etherload.osx
-	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
-	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
-	MEGATOOL=./build/megatool/macmegatool.exe
+	MEGATOOL=$(GSBUILD)/megatool/macmegatool.exe
 endif
 
 all: data datablobs code disk
@@ -39,14 +41,13 @@ datablobs:
 		sdcard/bg21_chr.bin \
 		sdcard/bg22_chr.bin \
 		sdcard/font_chr.bin \
+		sdcard/32x32sprite_chr.bin \
 		sdcard/data.bin
-
 	$(MEGATOOL) -a sdcard/data.bin 00000000
-
 	$(MEGATOOL) -c sdcard/data.bin.addr
 
 code:
-	java -cp $(KICK) kickass.KickAssembler65CE02 -vicesymbols -showmem -odir bin $(APPNAME).asm
+	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -libDir $(GSINC) -odir bin $(APPNAME).asm -symbolfile -bytedumpfile $(APPNAME).klist
 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
 	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
 
@@ -55,6 +56,7 @@ map:
 
 data: map
 	$(PNG65) sprites --ncm --size 16,16 --input "assets/font.png" --output "sdcard" --nofill
+	$(PNG65) sprites --ncm --size 32,32 --input "assets/32x32sprite.png" --output "sdcard" --nofill
 
 run: all
 	$(XEMU) -autoload -8 $(DISKNAME) -uartmon :4510 -videostd 1

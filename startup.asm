@@ -9,53 +9,65 @@
 // ------------------------------------------------------------
 // Memory layout
 //
-.const COLOR_OFFSET = $0800		// Offset ColorRam to make bank $10000 contiguous
-.const COLOR_RAM = $ff80000 + COLOR_OFFSET
+.const COLOR_OFFSET 		= $0800				// Offset ColorRam to make bank $10000 contiguous
+.const COLOR_RAM 			= $ff80000 + COLOR_OFFSET
 
-.const CHARS_RAM = $10000		// all bg chars / pixie data goes here
-.const MAP_RAM = $40000			// bg map data goes here
-.const SCREEN_RAM = $50000		// screen ram / pixie work ram goes here
+.const GRAPHICS_RAM 		= $10000			// all bg chars / pixie data goes here
+.const PIXIEANDSCREEN_RAM 	= $50000			// screen ram / pixie work ram goes here
+												// must be on a $100 alignment due to RRB pixie MAP behavior
 
+// --------------
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
-.segmentdef Code [start=$2000, max=$7fff]
-.segmentdef Data [start=$a000, max=$cfff]
+.segmentdef Code [start=$2000, max=$cfff]
+.segmentdef Data [startAfter="Code", max=$cfff]
+
+.segmentdef MappedPixieWorkRam [start=$8000, max=$bfff, virtual]
+
 .segmentdef BSS [start=$e000, max=$f400, virtual]
 
-.segmentdef MapRam [start=MAP_RAM, max=SCREEN_RAM-1, virtual]
+// --------------
+.segmentdef GraphicsRam [start=GRAPHICS_RAM, max=PIXIEANDSCREEN_RAM-1, virtual]
 
-.segmentdef ScreenRam [start=SCREEN_RAM, virtual]
-.segmentdef PixieWorkRam [startAfter="ScreenRam", max=SCREEN_RAM+$ffff, virtual]
+// --------------
+// Ensure PixieWorkRam is on a $100 alignemt due to RRB pixie MAP behavior
+//
+.segmentdef PixieWorkRam [start=PIXIEANDSCREEN_RAM, max=PIXIEANDSCREEN_RAM+$ffff, virtual]
+.segmentdef ScreenRam [startAfter="PixieWorkRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
+.segmentdef MapRam [startAfter="ScreenRam", max=PIXIEANDSCREEN_RAM+$ffff, virtual]
 
 // ------------------------------------------------------------
 // Defines to describe the screen size
 //
 .const SCREEN_WIDTH = 320
-.const SCREEN_HEIGHT = 208
+.const SCREEN_HEIGHT = 104
 
 .const PLAY_SCREEN_WIDTH = 320
-.const PLAY_SCREEN_HEIGHT = 208
+.const PLAY_SCREEN_HEIGHT = 200
+
+.const CREDITS_SCREEN_WIDTH = 256
+.const CREDITS_SCREEN_HEIGHT = 224
 
 // ------------------------------------------------------------
 //
-#import "includes/m65macros.s"
+#import "m65macros.s"
 
-#import "includes/layers_Functions.s"
-#import "includes/layout_Functions.s"
-#import "includes/assets_Functions.s"
+#import "layers_Functions.s"
+#import "layout_Functions.s"
+#import "assets_Functions.s"
 
 // ------------------------------------------------------------
 // Layer constants
 //
 
-// Maximum number of Pixie words use per row, 1 pixie is 2 words (GOTOX + CHAR)
+// Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
-.const NUM_PIXIES = 48						// Must be < 256
-.const NUM_PIXIEWORDS = NUM_PIXIES * 2
+.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
 
 // ------------------------------------------------------------
 // Layer layout for title screen example
 //
 // 1) BG layer for background
+//
 // 2) Pixie layer for you know, pixies
 //
 // 3) Always end with EOL layer
@@ -73,6 +85,7 @@
 //
 // 1) BG0 layer for background
 // 1) BG1 layer for midground
+//
 // 2) Pixie layer for you know, pixies
 //
 // 3) Always end with EOL layer
@@ -94,18 +107,22 @@
 // 1) BG0 layer for background
 // 1) BG1 layer for midground
 // 1) BG1 layer for midground
+//
 // 2) Pixie layer for you know, pixies
 //
-// 3) Always end with EOL layer
+// 3) BG1 layer for foreground
+// 3) BG1 layer for foreground
 //
-.const Layout3 = NewLayout("credits", PLAY_SCREEN_WIDTH, PLAY_SCREEN_HEIGHT, (PLAY_SCREEN_HEIGHT / 8))
-.const Layout3_BG0a = Layer_BG("bg_level0a", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
-.const Layout3_BG0b = Layer_BG("bg_level0b", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
-.const Layout3_BG1a = Layer_BG("bg_level1a", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
-.const Layout3_BG1b = Layer_BG("bg_level1b", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
+// 4) Always end with EOL layer
+//
+.const Layout3 = NewLayout("credits", CREDITS_SCREEN_WIDTH, CREDITS_SCREEN_HEIGHT, (CREDITS_SCREEN_HEIGHT / 8))
+.const Layout3_BG0a = Layer_BG("bg_level0a", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
+.const Layout3_BG0b = Layer_BG("bg_level0b", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
+.const Layout3_BG1a = Layer_BG("bg_level1a", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
+.const Layout3_BG1b = Layer_BG("bg_level1b", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
 .const Layout3_Pixie = Layer_PIXIE("pixie", NUM_PIXIEWORDS, 1)
-.const Layout3_BG2a = Layer_BG("bg_level2a", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
-.const Layout3_BG2b = Layer_BG("bg_level2b", (PLAY_SCREEN_WIDTH/16) + 1, true, 1)
+.const Layout3_BG2a = Layer_BG("bg_level2a", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
+.const Layout3_BG2b = Layer_BG("bg_level2b", (CREDITS_SCREEN_WIDTH/16) + 1, true, 1)
 .const Layout3_EOL = Layer_EOL("eol")
 .const Layout3end = EndLayout(Layout3)
 
@@ -113,7 +130,7 @@
 // Static BG Map sizes, in this example we are expanding the tile / map
 // set into a static buffer, for a real game you'd want to be more fancy
 //
-.const BG0ROWSIZE = (256 / 16) * 2
+.const BG0ROWSIZE = (512 / 16) * 2
 .const BG0NUMROWS = (256 / 8)
 
 .const BG1ROWSIZE = (512 / 16) * 2
@@ -133,6 +150,8 @@
 	PAL_BG0,
 	PAL_BG1,
 	PAL_BG2,
+
+	PAL_SPR,
 
 	NUM_PALETTES
 }
@@ -160,6 +179,9 @@ GameSubState:		.byte $00
 GameStateTimer:		.byte $00
 GameStateData:		.byte $00,$00,$00
 
+SaveState:			.dword 0
+SaveStateEnd:
+
 //--------------------------------------------------------
 // Main
 //--------------------------------------------------------
@@ -170,28 +192,30 @@ GameStateData:		.byte $00,$00,$00
 
 .print "--------"
 
-.const bgCharsBegin = SetAssetAddr(CHARS_RAM, $40000)
-.const bg0Chars = AddAsset("FS-C0", "sdcard/bg20_chr.bin")
-.const bg1Chars = AddAsset("FS-C1", "sdcard/bg21_chr.bin")
-.const bg2Chars = AddAsset("FS-C2", "sdcard/bg22_chr.bin")
-
-.const sprFont = AddAsset("FS-F0", "sdcard/font_chr.bin")
+.const bgCharsBegin = StartSection("GraphicsRan", GRAPHICS_RAM, PIXIEANDSCREEN_RAM-GRAPHICS_RAM)
+.const bg0Chars = AddAsset("F", "sdcard/bg20_chr.bin")
+.const bg1Chars = AddAsset("F", "sdcard/bg21_chr.bin")
+.const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
+.const sprFont = AddAsset("F", "sdcard/font_chr.bin")
+.const sprite32x32Chars = AddAsset("F", "sdcard/32x32sprite_chr.bin")
+.const bgCharsEnd = EndSection()
 
 .print "--------"
 
-.const blobsBegin = SetAssetAddr($00000, $40000)
+.const blobsBegin = StartSection("iffl", $00000, $40000)
 .const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin.addr.mc")
+.const blobsEnd = EndSection()
 
 .print "--------"
 
-#import "includes/layers_code.s"
-#import "includes/layout_code.s"
-#import "includes/assets_code.s"
-#import "includes/system_code.s"
-#import "includes/fastLoader.s"
-#import "includes/decruncher.s"
-#import "includes/keyb_code.s"
-#import "includes/pixie_code.s"
+#import "layers_code.s"
+#import "layout_code.s"
+#import "assets_code.s"
+#import "system_code.s"
+#import "fastLoader.s"
+#import "decruncher.s"
+#import "keyb_code.s"
+#import "pixie_code.s"
 
 // ------------------------------------------------------------
 //
@@ -207,11 +231,11 @@ Entry:
 {
 	jsr System.Initialization1
 
+	// Init the raster IRQ
+	//
  	sei
 
-	lda #$7f
-    sta $dc0d
-    sta $dd0d
+	disableCIAInterrupts()
 
     lda $dc0d
     lda $dd0d
@@ -253,23 +277,16 @@ Entry:
 
 	jsr System.Initialization2
 
-	VIC4_SetScreenLocation(SCREEN_RAM)
+	VIC4_SetScreenLocation(ScreenRam)
 
 	// Initialize palette and bgmap data
 	jsr InitPalette
 	jsr InitBGMap
 
-	TextSetPos(0,0)
-//	TextPrintMsg(imessage)
-
 	// Setup the initial game state
 	lda #GStateTitles
 	sta RequestGameState
 	jsr SwitchGameStates
-
-    // Disable RSTDELENS
-    lda #%01000000
-    trb $d05d
 
     // set the interrupt to line bottom position
     jsr Irq.SetIRQBotPos
@@ -290,6 +307,7 @@ mainloop:
 	// ALL pixie data and sets the X and Y scroll values
 	//
 	jsr Layout.ConfigureHW
+
 	jsr Layout.UpdateBuffers
 
 	// If the frame is disabled, enable it, this ensure first frame of garbage isn't seen
@@ -347,7 +365,8 @@ skipEnable:
 
 // ------------------------------------------------------------
 //
-SwitchGameStates: {
+SwitchGameStates: 
+{
 	sta GameState
 	asl
 	tax
@@ -357,40 +376,60 @@ SwitchGameStates: {
 
 // ------------------------------------------------------------
 //
-RenderNop: {
+RenderNop: 
+{
 	rts
 }
 
 // ------------------------------------------------------------
 //
-InitPalette: {
+InitPalette: 
+{
+	.var palPtr = Tmp1			// 16 bit
+
 	//Bit pairs = CurrPalette, TextPalette, SpritePalette, AltPalette
 	lda #%00000000 //Edit=%00, Text = %00, Sprite = %01, Alt = %00
 	sta $d070 
 
-	ldx #$00
-!:
-	.for(var p=0; p<NUM_PALETTES; p++) 
-	{
-		lda Palette + (p * $30) + $000,x
-		sta $d100 + (p * $10),x
-		lda Palette + (p * $30) + $010,x
-		sta $d200 + (p * $10),x
-		lda Palette + (p * $30) + $020,x
-		sta $d300 + (p * $10),x
-	}
+	_set16im(Palette, palPtr)
+
+	ldx #$00								// HW pal index
+
+	ldz #$00								// pal index
+
+incPalLoop:
+	phz
+
+	ldz #$00
+colLoop:
+	lda (palPtr),z							// get palette value
+	sta $d100,x								// store into HW palette
+	inz
+
+	lda (palPtr),z							// get palette value
+	sta $d200,x								// store into HW palette
+	inz
+
+	lda (palPtr),z							// get palette value
+	sta $d300,x								// store into HW palette
+	inz
 
 	inx
-	cpx #$10
-	lbne !-
+
+	cpz #$30
+	bne colLoop
+
+	_add16im(palPtr, $30, palPtr)
+
+	plz
+	inz
+	cpz #16
+	bne incPalLoop
 
 	lda #$00
 	sta $d100
-	sta $d110
 	sta $d200
-	sta $d210
 	sta $d300
-	sta $d310
 
 	rts
 }
@@ -421,10 +460,22 @@ Palette:
 	.import binary "./sdcard/bg20_pal.bin"
 	.import binary "./sdcard/bg21_pal.bin"
 	.import binary "./sdcard/bg22_pal.bin"
+	.import binary "./sdcard/32x32sprite_pal.bin"
+
+// ------------------------------------------------------------
+.segment GraphicsRam "Graphics RAM"
+GraphicsData:
+	.fill (bgCharsBegin.currAddr - bgCharsBegin.baseAddr),0
 
 // ------------------------------------------------------------
 // Ensure these tables DONOT straddle a bank address
 //
+.segment MappedPixieWorkRam "Mapped Pixie Work RAM"
+MappedPixieWorkTiles:
+	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
+MappedPixieWorkAttrib:
+	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
+
 .segment PixieWorkRam "Pixie Work RAM"
 PixieWorkTiles:
 	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
@@ -432,5 +483,6 @@ PixieWorkAttrib:
 	.fill (Layout1_Pixie.DataSize * MAX_NUM_ROWS), $00
 
 .segment ScreenRam "Screen RAM"
+ScreenRam:
 	.fill (MAX_SCREEN_SIZE), $00
 

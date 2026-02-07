@@ -1,3 +1,6 @@
+build/RCPacker/rcPacker
+build/RCPacker/*.o
+
 bin/Startup.prg
 bin/Startup.sym
 bin/Startup.vs
@@ -17,3 +20,4 @@ build/MegaTool/DecrZeroinit.bin
 build/MegaTool/DecrZeroinit.vs
 build/MegaTool/megatool.exe
 includes/.source.txt
+bin/startup.klist
