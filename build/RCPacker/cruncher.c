@@ -705,12 +705,27 @@ bool crunch(File *aSource,
   uint packLen = put;
   uint fileLen = put;
   uint decrLen = 0;
+  double packedPct = 0.0;
+  if (ibufSize > 0) {
+    packedPct = (100.0 * (double)packLen) / (double)ibufSize;
+  }
+
+  printf("[Crunch] Input file size:   %zu bytes\n", aSource->size);
+  printf("[Crunch] Input payload:     %u bytes (file - %u-byte header)\n", ibufSize, headerSize);
+  printf("[Crunch] Packed stream:     %u bytes (%.2f%% of input)\n", packLen, packedPct);
+  printf("[Crunch] Margin:            %d bytes\n", margin);
+
   if(isExecutable) {
     decrLen = DECRUNCHER_LENGTH;
     fileLen += decrLen + 2;
+    printf("[Crunch] Mode:              executable\n");
+    printf("[Crunch] Decruncher size:   %u bytes\n", decrLen);
   } else {
     fileLen += 8;       // 4-byte packed addr + 4-byte depack addr
+    printf("[Crunch] Mode:              data (32-bit header)\n");
   }
+
+  printf("[Crunch] Output size:       %u bytes (full .b2)\n", fileLen);
 
   aTarget->size = fileLen;
   aTarget->data = (byte*)malloc(aTarget->size);
@@ -754,6 +769,9 @@ bool crunch(File *aSource,
     if (isRelocated) {
       packedAddress = address + ibufSize - packLen - 8;
     }
+
+    printf("[Crunch] Original address:  0x%08X\n", originalAddress);
+    printf("[Crunch] Packed address:    0x%08X\n", packedAddress);
 
     // Write 4-byte packed data load address (little-endian)
     target[0] = (packedAddress      ) & 0xff;
