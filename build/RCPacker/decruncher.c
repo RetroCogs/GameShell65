@@ -312,14 +312,26 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
   outB3File->data = NULL;
   outB3File->size = 0;
 
-  if (packedFile->size == 0) {
-    printf("Error (B-3): Packed file is empty.\n");
+  if (packedFile->size < 8) {
+    printf("Error (B-3): Packed file too small (missing header).\n");
     return -1;
   }
 
-  printf("[Decrunch] Input .b2 size:  %zu bytes\n", packedFile->size);
+  uint32_t loadAddr  = ((uint32_t)packedFile->data[0])       |
+                       ((uint32_t)packedFile->data[1] <<  8) |
+                       ((uint32_t)packedFile->data[2] << 16) |
+                       ((uint32_t)packedFile->data[3] << 24);
+  uint32_t origSize  = ((uint32_t)packedFile->data[4])       |
+                       ((uint32_t)packedFile->data[5] <<  8) |
+                       ((uint32_t)packedFile->data[6] << 16) |
+                       ((uint32_t)packedFile->data[7] << 24);
 
-  if (!decrunchPayload(packedFile->data, packedFile->size, &payload, &payloadSize)) {
+  printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedFile->size);
+  printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
+  printf("[Decrunch] Original size:   0x%08X bytes\n", origSize);
+  printf("[Decrunch] Stream size:     0x%08X bytes\n", (unsigned int)(packedFile->size - 8));
+
+  if (!decrunchPayload(packedFile->data + 8, packedFile->size - 8, &payload, &payloadSize)) {
     printf("Error (B-4): Decrunch failed for \"%s\".\n", packedFile->name);
     return -1;
   }
@@ -354,8 +366,8 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
   outB3File->data = roundTripData;
   outB3File->size = roundTripSize;
 
-  printf("[Decrunch] Output payload:  %zu bytes\n", payloadSize);
-  printf("[Decrunch] Output .b3 size: %zu bytes\n", roundTripSize);
+  printf("[Decrunch] Output payload:  0x%08X bytes\n", (unsigned int)payloadSize);
+  printf("[Decrunch] Output .b3 size: 0x%08X bytes\n", (unsigned int)roundTripSize);
 
   free(payload);
   return 0;
@@ -365,13 +377,13 @@ int validateOriginalVsB3(const File *originalFile, const File *b3File)
 {
   size_t diffOffset = 0;
 
-  printf("[Validate] Original size:   %zu bytes\n", originalFile->size);
-  printf("[Validate] Round-trip size: %zu bytes\n", b3File->size);
+  printf("[Validate] Original size:   0x%08X bytes\n", (unsigned int)originalFile->size);
+  printf("[Validate] Round-trip size: 0x%08X bytes\n", (unsigned int)b3File->size);
 
   if (compareBuffers(originalFile->data, originalFile->size,
                      b3File->data, b3File->size, &diffOffset)) {
     printf("Validation OK: \"%s\" matches original input.\n", b3File->name);
-    printf("[Validate] Compared bytes:  %zu\n", originalFile->size);
+    printf("[Validate] Compared bytes:  0x%08X\n", (unsigned int)originalFile->size);
     return 0;
   }
 

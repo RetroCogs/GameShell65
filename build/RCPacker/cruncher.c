@@ -702,23 +702,32 @@ bool crunch(File *aSource,
     packedPct = (100.0 * (double)packLen) / (double)ibufSize;
   }
 
-  printf("[Crunch] Input file size:   %zu bytes\n", aSource->size);
+  printf("[Crunch] Input file size:   0x%08X bytes\n", (unsigned int)aSource->size);
   if (headerSize > 0) {
-    printf("[Crunch] Input payload:     %u bytes (file - %u-byte header)\n", ibufSize, headerSize);
+    printf("[Crunch] Input payload:     0x%08X bytes (file - 0x%08X-byte header)\n", ibufSize, headerSize);
   }
-  printf("[Crunch] Packed stream:     %u bytes (%.2f%% of input)\n", packLen, packedPct);
+  printf("[Crunch] Packed stream:     0x%08X bytes (%.2f%% of input)\n", packLen, packedPct);
   printf("[Crunch] Margin:            %d bytes\n", margin);
+
+  uint loadAddr = 0;
 
   if(isExecutable) {
     decrLen = DECRUNCHER_LENGTH;
     fileLen += decrLen + 2;
     printf("[Crunch] Mode:              executable\n");
-    printf("[Crunch] Decruncher size:   %u bytes\n", decrLen);
+    printf("[Crunch] Decruncher size:   0x%08X bytes\n", decrLen);
   } else {
+    // 8-byte header: [4B loadAddr LE][4B original size LE]
+    // loadAddr: place packed stream here so in-place forward decrunch
+    // to address 0 never overwrites unread input
+    loadAddr = ibufSize - packLen + (uint)margin;
+    fileLen += 8;  // header
     printf("[Crunch] Mode:              data (raw binary)\n");
+    printf("[Crunch] Load address:      0x%08X\n", loadAddr);
+    printf("[Crunch] Original size:     0x%08X bytes\n", ibufSize);
   }
 
-  printf("[Crunch] Output size:       %u bytes (full .b2)\n", fileLen);
+  printf("[Crunch] Output size:       0x%08X bytes (full .b2)\n", fileLen);
 
   aTarget->size = fileLen;
   aTarget->data = (byte*)malloc(aTarget->size);
@@ -748,9 +757,17 @@ bool crunch(File *aSource,
       target[i + 2 + decrLen] = obuf[i];
     }
 
-  } else { // Not executable - raw binary: packed stream only
+  } else { // Not executable - raw binary: 8-byte header + packed stream
+    target[0] = (loadAddr      ) & 0xff;
+    target[1] = (loadAddr >>  8) & 0xff;
+    target[2] = (loadAddr >> 16) & 0xff;
+    target[3] = (loadAddr >> 24) & 0xff;
+    target[4] = (ibufSize      ) & 0xff;
+    target[5] = (ibufSize >>  8) & 0xff;
+    target[6] = (ibufSize >> 16) & 0xff;
+    target[7] = (ibufSize >> 24) & 0xff;
     for(i = 0; i < put; ++i) {
-      target[i] = obuf[i];
+      target[i + 8] = obuf[i];
     }
   }
 
