@@ -13,14 +13,6 @@ typedef struct {
   uint bitsLeft;
 } BitStream;
 
-static uint32_t readLE32(const byte *p)
-{
-  return ((uint32_t)p[0]) |
-         ((uint32_t)p[1] << 8) |
-         ((uint32_t)p[2] << 16) |
-         ((uint32_t)p[3] << 24);
-}
-
 static bool writeRawFile(const char *fileName, const byte *data, size_t size)
 {
   FILE *fp = fopen(fileName, "wb");
@@ -315,26 +307,24 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
   byte *roundTripData = NULL;
   size_t roundTripSize = 0;
   char *b3Name;
-  uint32_t depackAddr;
 
   outB3File->name = NULL;
   outB3File->data = NULL;
   outB3File->size = 0;
 
-  if (packedFile->size < 8) {
-    printf("Error (B-3): Packed output too small for 32-bit data header.\n");
+  if (packedFile->size == 0) {
+    printf("Error (B-3): Packed file is empty.\n");
     return -1;
   }
 
   printf("[Decrunch] Input .b2 size:  %zu bytes\n", packedFile->size);
-  printf("[Decrunch] Stream size:     %zu bytes\n", packedFile->size - 8);
 
-  if (!decrunchPayload(packedFile->data + 8, packedFile->size - 8, &payload, &payloadSize)) {
+  if (!decrunchPayload(packedFile->data, packedFile->size, &payload, &payloadSize)) {
     printf("Error (B-4): Decrunch failed for \"%s\".\n", packedFile->name);
     return -1;
   }
 
-  roundTripSize = payloadSize + 4;
+  roundTripSize = payloadSize;
   roundTripData = (byte *)malloc(roundTripSize);
   if (roundTripData == NULL) {
     printf("Error (B-5): Out of memory while building round-trip data.\n");
@@ -342,12 +332,7 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
     return -1;
   }
 
-  depackAddr = readLE32(packedFile->data + 4);
-  roundTripData[0] = (byte)(depackAddr & 0xff);
-  roundTripData[1] = (byte)((depackAddr >> 8) & 0xff);
-  roundTripData[2] = (byte)((depackAddr >> 16) & 0xff);
-  roundTripData[3] = (byte)((depackAddr >> 24) & 0xff);
-  memcpy(roundTripData + 4, payload, payloadSize);
+  memcpy(roundTripData, payload, payloadSize);
 
   b3Name = makeSuffixedName(inputName, ".b3");
   if (b3Name == NULL) {
@@ -371,7 +356,6 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
 
   printf("[Decrunch] Output payload:  %zu bytes\n", payloadSize);
   printf("[Decrunch] Output .b3 size: %zu bytes\n", roundTripSize);
-  printf("[Decrunch] Depack address:  0x%08X\n", depackAddr);
 
   free(payload);
   return 0;

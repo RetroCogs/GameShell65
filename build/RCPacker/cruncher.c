@@ -1,21 +1,13 @@
 /**
  * RCPacker ByteBoozer Cruncher - Extended for 32-bit Addressing
- * 
- * Supports both C64 (16-bit) and 32-bit address formats:
- * 
+ *
  * EXECUTABLE MODE (C64 only):
  *   Input:  [2-byte load addr] [data...]
  *   Output: [BASIC 0x0801] [Decruncher] [Packed data]
- * 
- * DATA MODE (16-bit, original):
- *   Input:  [2-byte load addr] [data...]
- *   Output: [2-byte packed addr] [2-byte depack addr] [Packed data]
- * 
- * DATA MODE (32-bit, extended):
- *   Input:  [4-byte load addr] [data...] (files > 65536 bytes supported)
- *   Output: [4-byte packed addr] [4-byte depack addr] [Packed data]
- * 
- * The mode is auto-detected based on isExecutable flag and input header size.
+ *
+ * DATA MODE (raw binary):
+ *   Input:  [data...]  (no header - all bytes are payload)
+ *   Output: [Packed data]
  */
 
 #include "cruncher.h"
@@ -681,8 +673,8 @@ bool crunch(File *aSource,
   uint i;
   byte *target;
 
-  // Support 4-byte header for 32-bit addressing
-  uint headerSize = isExecutable ? 2 : 4;
+  // Executable mode strips 2-byte C64 load address; data mode is raw binary
+  uint headerSize = isExecutable ? 2 : 0;
   ibufSize = aSource->size - headerSize;
   ibuf = (byte*)malloc(ibufSize);
   context = (node*)malloc(sizeof(node) * ibufSize);
@@ -711,7 +703,9 @@ bool crunch(File *aSource,
   }
 
   printf("[Crunch] Input file size:   %zu bytes\n", aSource->size);
-  printf("[Crunch] Input payload:     %u bytes (file - %u-byte header)\n", ibufSize, headerSize);
+  if (headerSize > 0) {
+    printf("[Crunch] Input payload:     %u bytes (file - %u-byte header)\n", ibufSize, headerSize);
+  }
   printf("[Crunch] Packed stream:     %u bytes (%.2f%% of input)\n", packLen, packedPct);
   printf("[Crunch] Margin:            %d bytes\n", margin);
 
@@ -721,8 +715,7 @@ bool crunch(File *aSource,
     printf("[Crunch] Mode:              executable\n");
     printf("[Crunch] Decruncher size:   %u bytes\n", decrLen);
   } else {
-    fileLen += 8;       // 4-byte packed addr + 4-byte depack addr
-    printf("[Crunch] Mode:              data (32-bit header)\n");
+    printf("[Crunch] Mode:              data (raw binary)\n");
   }
 
   printf("[Crunch] Output size:       %u bytes (full .b2)\n", fileLen);
@@ -755,38 +748,9 @@ bool crunch(File *aSource,
       target[i + 2 + decrLen] = obuf[i];
     }
 
-  } else { // Not executable.. (32-bit address format)
-
-    // Extract 32-bit original load address from header
-    uint originalAddress = (aSource->data[3] << 24) | 
-                           (aSource->data[2] << 16) | 
-                           (aSource->data[1] << 8) | 
-                           aSource->data[0];
-    
-    // Calculate packed data start address
-    uint packedAddress = originalAddress + (ibufSize - packLen - 8 + margin);
-
-    if (isRelocated) {
-      packedAddress = address + ibufSize - packLen - 8;
-    }
-
-    printf("[Crunch] Original address:  0x%08X\n", originalAddress);
-    printf("[Crunch] Packed address:    0x%08X\n", packedAddress);
-
-    // Write 4-byte packed data load address (little-endian)
-    target[0] = (packedAddress      ) & 0xff;
-    target[1] = (packedAddress >>  8) & 0xff;
-    target[2] = (packedAddress >> 16) & 0xff;
-    target[3] = (packedAddress >> 24) & 0xff;
-    
-    // Write 4-byte depack target address (little-endian)
-    target[4] = aSource->data[0];
-    target[5] = aSource->data[1];
-    target[6] = aSource->data[2];
-    target[7] = aSource->data[3];
-
+  } else { // Not executable - raw binary: packed stream only
     for(i = 0; i < put; ++i) {
-      target[i + 8] = obuf[i];
+      target[i] = obuf[i];
     }
   }
 
