@@ -1,3 +1,23 @@
+/**
+ * RCPacker ByteBoozer Cruncher - Extended for 32-bit Addressing
+ * 
+ * Supports both C64 (16-bit) and 32-bit address formats:
+ * 
+ * EXECUTABLE MODE (C64 only):
+ *   Input:  [2-byte load addr] [data...]
+ *   Output: [BASIC 0x0801] [Decruncher] [Packed data]
+ * 
+ * DATA MODE (16-bit, original):
+ *   Input:  [2-byte load addr] [data...]
+ *   Output: [2-byte packed addr] [2-byte depack addr] [Packed data]
+ * 
+ * DATA MODE (32-bit, extended):
+ *   Input:  [4-byte load addr] [data...] (files > 65536 bytes supported)
+ *   Output: [4-byte packed addr] [4-byte depack addr] [Packed data]
+ * 
+ * The mode is auto-detected based on isExecutable flag and input header size.
+ */
+
 #include "cruncher.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -661,7 +681,9 @@ bool crunch(File *aSource,
   uint i;
   byte *target;
 
-  ibufSize = aSource->size - 2;
+  // Support 4-byte header for 32-bit addressing
+  uint headerSize = isExecutable ? 2 : 4;
+  ibufSize = aSource->size - headerSize;
   ibuf = (byte*)malloc(ibufSize);
   context = (node*)malloc(sizeof(node) * ibufSize);
   link = (uint*)malloc(sizeof(uint) * ibufSize);
@@ -669,7 +691,7 @@ bool crunch(File *aSource,
 
   // Load ibuf and clear context
   for(i = 0; i < ibufSize; ++i) {
-    ibuf[i] = aSource->data[i + 2];
+    ibuf[i] = aSource->data[i + headerSize];
     context[i].cost = 0;
     link[i] = 0;
     rleInfo[i].length = 0;
@@ -687,7 +709,7 @@ bool crunch(File *aSource,
     decrLen = DECRUNCHER_LENGTH;
     fileLen += decrLen + 2;
   } else {
-    fileLen += 4;
+    fileLen += 8;       // 4-byte packed addr + 4-byte depack addr
   }
 
   aTarget->size = fileLen;
@@ -718,24 +740,35 @@ bool crunch(File *aSource,
       target[i + 2 + decrLen] = obuf[i];
     }
 
-  } else { // Not executable..
+  } else { // Not executable.. (32-bit address format)
 
-    // Experimantal decision of start address
-//    uint startAddress = 0xfffa - packLen - 2;
-    uint startAddress = (aSource->data[1] << 8) | aSource->data[0];
-    startAddress += (ibufSize - packLen - 2 + margin);
+    // Extract 32-bit original load address from header
+    uint originalAddress = (aSource->data[3] << 24) | 
+                           (aSource->data[2] << 16) | 
+                           (aSource->data[1] << 8) | 
+                           aSource->data[0];
+    
+    // Calculate packed data start address
+    uint packedAddress = originalAddress + (ibufSize - packLen - 8 + margin);
 
     if (isRelocated) {
-      startAddress = address - packLen - 2;
+      packedAddress = address + ibufSize - packLen - 8;
     }
 
-    target[0] = startAddress & 0xff; // Load address
-    target[1] = startAddress >> 8;
-    target[2] = aSource->data[0]; // Depack to address
-    target[3] = aSource->data[1];
+    // Write 4-byte packed data load address (little-endian)
+    target[0] = (packedAddress      ) & 0xff;
+    target[1] = (packedAddress >>  8) & 0xff;
+    target[2] = (packedAddress >> 16) & 0xff;
+    target[3] = (packedAddress >> 24) & 0xff;
+    
+    // Write 4-byte depack target address (little-endian)
+    target[4] = aSource->data[0];
+    target[5] = aSource->data[1];
+    target[6] = aSource->data[2];
+    target[7] = aSource->data[3];
 
     for(i = 0; i < put; ++i) {
-      target[i + 4] = obuf[i];
+      target[i + 8] = obuf[i];
     }
   }
 

@@ -53,7 +53,7 @@
 		.error "    Adding " + path + " ran out of space: $" + toHexString((Asset_CurrPtr + newAsset.binary.getSize()) - Asset_CurrMax) + " bytes too big"
 	}
 
-	.print "    adding asset '" + path + "' at baseChar [$" + toHexString(newAsset.baseChar) + "] " + newAsset.name + " at $" + toHexString(newAsset.addr) + " size = $" + toHexString(newAsset.binary.getSize()) + " crunchaddress = $" + toHexString(newAsset.crunchAddress)
+	.print "    adding asset '" + path + "' at baseChar [$" + toHexString(newAsset.baseChar) + "] " + newAsset.name + " at $" + toHexString(newAsset.addr) + " size = $" + toHexString(newAsset.binary.getSize()) + " crunchaddress = $" + toHexString(newAsset.crunchAddress) + " endAddress = $" + toHexString(newAsset.crunchAddress + newAsset.binary.getSize())
 	
 	.eval Asset_CurrPtr += newAsset.binary.getSize()
 	.eval Asset_CurrPtr = (Asset_CurrPtr + $00ff) & $fffff00

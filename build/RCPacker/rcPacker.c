@@ -13,9 +13,10 @@ int main(int argc, char * argv[])
     if (argc == 1)
     {
         printf("RCPacker [packer for Mega65] usage:\n");
-        printf("\tblah blah\n");
-        printf("\tblah blah\n");
-        printf("\tblah blah\n");
+        printf("\trcpacker <input_file> [-e] [-r] [-c]\n");
+        printf("\t  -e : treat as executable program\n");
+        printf("\t  -r : apply relocation\n");
+        printf("\t  -c : clip start address\n");
     }
     else
     {
