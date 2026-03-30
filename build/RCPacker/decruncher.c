@@ -14,24 +14,6 @@ typedef struct
 	uint bitsLeft;
 } BitStream;
 
-static bool writeRawFile(const char *fileName, const byte *data, size_t size)
-{
-	FILE *fp = fopen(fileName, "wb");
-	if (fp == NULL)
-	{
-		return false;
-	}
-
-	if (fwrite(data, 1, size, fp) != size)
-	{
-		fclose(fp);
-		return false;
-	}
-
-	fclose(fp);
-	return true;
-}
-
 static char *makeSuffixedName(const char *fileName, const char *suffix)
 {
 	size_t baseLen = strlen(fileName);
@@ -321,12 +303,10 @@ static bool decrunchPayload(const byte *packed, size_t packedSize, byte **outPay
 	return true;
 }
 
-int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
+int decrunchToMemory(const File *packedFile, const char *inputName, File *outB3File)
 {
 	byte *payload = NULL;
 	size_t payloadSize = 0;
-	byte *roundTripData = NULL;
-	size_t roundTripSize = 0;
 	char *b3Name;
 
 	outB3File->name = NULL;
@@ -340,13 +320,13 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
 	}
 
 	uint32_t loadAddr = ((uint32_t)packedFile->data[0]) |
-											((uint32_t)packedFile->data[1] << 8) |
-											((uint32_t)packedFile->data[2] << 16) |
-											((uint32_t)packedFile->data[3] << 24);
+		((uint32_t)packedFile->data[1] << 8) |
+		((uint32_t)packedFile->data[2] << 16) |
+		((uint32_t)packedFile->data[3] << 24);
 	uint32_t origSize = ((uint32_t)packedFile->data[4]) |
-											((uint32_t)packedFile->data[5] << 8) |
-											((uint32_t)packedFile->data[6] << 16) |
-											((uint32_t)packedFile->data[7] << 24);
+		((uint32_t)packedFile->data[5] << 8) |
+		((uint32_t)packedFile->data[6] << 16) |
+		((uint32_t)packedFile->data[7] << 24);
 
 	printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedFile->size);
 	printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
@@ -359,43 +339,22 @@ int decrunchToB3(const File *packedFile, const char *inputName, File *outB3File)
 		return -1;
 	}
 
-	roundTripSize = payloadSize;
-	roundTripData = (byte *)malloc(roundTripSize);
-	if (roundTripData == NULL)
-	{
-		printf("Error (B-5): Out of memory while building round-trip data.\n");
-		free(payload);
-		return -1;
-	}
-
-	memcpy(roundTripData, payload, payloadSize);
-
 	b3Name = makeSuffixedName(inputName, ".b3");
 	if (b3Name == NULL)
 	{
 		printf("Error (B-6): Could not allocate .b3 file name.\n");
-		free(roundTripData);
-		free(payload);
-		return -1;
-	}
-
-	if (!writeRawFile(b3Name, roundTripData, roundTripSize))
-	{
-		printf("Error (B-7): Could not write \"%s\".\n", b3Name);
-		free(b3Name);
-		free(roundTripData);
 		free(payload);
 		return -1;
 	}
 
 	outB3File->name = b3Name;
-	outB3File->data = roundTripData;
-	outB3File->size = roundTripSize;
+	outB3File->data = payload;
+	outB3File->size = payloadSize;
 
 	printf("[Decrunch] Output payload:  0x%08X bytes\n", (unsigned int)payloadSize);
-	printf("[Decrunch] Output .b3 size: 0x%08X bytes\n", (unsigned int)roundTripSize);
+	printf("[Decrunch] Output .b3 size: 0x%08X bytes\n", (unsigned int)payloadSize);
+	printf("[Decrunch] Validation path: in-memory\n");
 
-	free(payload);
 	return 0;
 }
 
