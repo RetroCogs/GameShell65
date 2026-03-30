@@ -444,6 +444,8 @@ colLoop:
 #import "gsCredits.s"
 #import "bgmap.s"
 
+#import "build/RCPacker/Decruncher.inc"
+
 .segment Data "GameState Tables"
 GSIniStateTable:
 	.fillword GSIniStateList.size(), GSIniStateList.get(i)
