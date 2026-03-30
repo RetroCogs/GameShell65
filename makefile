@@ -34,6 +34,7 @@ disk:
 	$(C1541) -format "game shell 65,0" d81 $(DISKNAME)
 	$(C1541) -attach $(DISKNAME) 8 -write bin/$(APPNAME).prg.addr.mc "game shell 65"
 	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin.addr.mc "fs-iffl0"
+	$(C1541) -attach $(DISKNAME) 8 -write sdcard/32x32sprite2_chr.bin.b2 "fs-iffl1"
 
 datablobs:
 	$(MEGATOOL) -p 00000100 \
@@ -46,6 +47,8 @@ datablobs:
 	$(MEGATOOL) -a sdcard/data.bin 00000000
 	$(MEGATOOL) -c sdcard/data.bin.addr
 
+	build/RCPacker/rcpacker -v sdcard/32x32sprite2_chr.bin
+
 code:
 	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -libDir $(GSINC) -odir bin $(APPNAME).asm -symbolfile -bytedumpfile $(APPNAME).klist
 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
@@ -57,6 +60,10 @@ map:
 data: map
 	$(PNG65) sprites --ncm --size 16,16 --input "assets/font.png" --output "sdcard" --nofill
 	$(PNG65) sprites --ncm --size 32,32 --input "assets/32x32sprite.png" --output "sdcard" --nofill
+	$(PNG65) sprites --ncm --size 32,32 --input "assets/32x32sprite2.png" --output "sdcard" --nofill
+
+list:
+	$(C1541) -attach $(DISKNAME) -list
 
 run: all
 	$(XEMU) -autoload -8 $(DISKNAME) -uartmon :4510 -videostd 1

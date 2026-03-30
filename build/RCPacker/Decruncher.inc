@@ -6,8 +6,10 @@
 
 //Variables..        				#Bytes
 .const zp_base		= $02       	// -
-.const bits			= zp_base   	//1
-.const put			= zp_base+2 	//2
+.const bits			= zp_base   	// 1
+.const put			= bits + 2 		// 4
+.const size			= put + 4 		// 4
+.const get			= size + 4 		// 4
 
 // ------------------------------------------------------------------
 //
@@ -66,19 +68,22 @@ GnbEnd:
 // ------------------------------------------------------------------
 //
 Decrunch:
-	sty Get1+1
-	sty Get2+1
-	sty Get3+1
-	stx Get1+2
-	stx Get2+2
-	stx Get3+2
+	stx Get1+1
+	stx Get2+1
+	stx Get3+1
+	sty Get1+2
+	sty Get2+2
+	sty Get3+2
 
+	// Get the first 2 DWORDS from the header: load address and original size
 	ldx #0
 !:	
 	jsr GetNewBits
-	sty put-1,x
-	cpx #2
+	// sty put-1,x
+	cpx #8
 	bcc !-
+
+	// Start decrunching the payload
 	lda #$80
 	sta bits
 DLoop:

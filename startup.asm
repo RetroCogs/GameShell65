@@ -160,7 +160,12 @@
 //
 .segment Zeropage "Main zeropage"
 
-Tmp:			.word $0000,$0000		// General reusable data (Don't use in IRQ)
+DeBits:			.byte $00,$00						// Used for bit unpacking in decruncher
+DePut:			.word $0000,$0000					// Used for put unpacking in decruncher, note this is 16 bit as some crunchers need > 256 byte lookahead
+DeSize:			.word $0000,$0000					// Used for size unpacking in decruncher
+DeGet:			.word $0000,$0000					// Used for get unpacking in decruncher	
+
+Tmp:			.word $0000,$0000			// General reusable data (Don't use in IRQ)
 Tmp1:			.word $0000,$0000
 Tmp2:			.word $0000,$0000
 Tmp3:			.word $0000,$0000
@@ -181,6 +186,8 @@ GameStateData:		.byte $00,$00,$00
 
 SaveState:			.dword 0
 SaveStateEnd:
+
+.const testDecomp = $B000
 
 //--------------------------------------------------------
 // Main
@@ -204,6 +211,7 @@ SaveStateEnd:
 
 .const blobsBegin = StartSection("iffl", $00000, $40000)
 .const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin.addr.mc")
+.const iffl1 = AddAsset("FS-IFFL1", "sdcard/32x32sprite2_chr.bin.b2")
 .const blobsEnd = EndSection()
 
 .print "--------"
@@ -263,8 +271,16 @@ Entry:
 	// initialise fast load (start drive motor)
 	jsr fl_init
 
+	LoadFile(testDecomp + iffl1.crunchAddress, iffl1.filenamePtr)
+	
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	DecrunchFile(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
+	
+	_set16im(testDecomp, DePut)
+
+	ldx #<(testDecomp + iffl1.crunchAddress)
+	ldy #>(testDecomp + iffl1.crunchAddress)
+	jsr Decrunch
 
 	// done loading. stop drive motor
 	jsr fl_exit
@@ -444,6 +460,7 @@ colLoop:
 #import "gsCredits.s"
 #import "bgmap.s"
 
+.segment Code "Decrunch"
 #import "build/RCPacker/Decruncher.inc"
 
 .segment Data "GameState Tables"
