@@ -5,7 +5,7 @@
 void freeFile(File *aFile)
 {
 	free(aFile->name);
-	free(aFile->data);
+	free(aFile->buffer.data);
 }
 
 char *mystrdup(const char *str)
@@ -35,7 +35,7 @@ bool readFile(File *aFile, const char *fileName)
 	{
 		return false;
 	}
-	aFile->size = fileStatus.st_size;
+	aFile->buffer.size = fileStatus.st_size;
 
 	fp = fopen(aFile->name, "rb");
 	if (fp == NULL)
@@ -43,17 +43,17 @@ bool readFile(File *aFile, const char *fileName)
 		return false;
 	}
 
-	aFile->data = (byte *)malloc(aFile->size);
-	if (aFile->data == NULL)
+	aFile->buffer.data = (byte *)malloc(aFile->buffer.size);
+	if (aFile->buffer.data == NULL)
 	{
 		fclose(fp);
 		return false;
 	}
 
-	if (fread(aFile->data, 1, aFile->size, fp) != aFile->size)
+	if (fread(aFile->buffer.data, 1, aFile->buffer.size, fp) != aFile->buffer.size)
 	{
 		fclose(fp);
-		free(aFile->data);
+		free(aFile->buffer.data);
 		return false;
 	}
 
@@ -61,29 +61,17 @@ bool readFile(File *aFile, const char *fileName)
 	return true;
 }
 
-bool writeFile(File *aFile, const char *fileName)
+bool writeFile(const Buffer *aBuffer, const char *fileName)
 {
 	FILE *fp = NULL;
-	size_t length;
 
-	length = strlen(fileName);
-	aFile->name = (char *)malloc(length + 4);
-
-	if (aFile->name == NULL)
-	{
-		return false;
-	}
-
-	strncpy(aFile->name, fileName, length);
-	strncpy(aFile->name + length, ".b2\0", 4);
-
-	fp = fopen(aFile->name, "wb");
+	fp = fopen(fileName, "wb");
 	if (fp == NULL)
 	{
 		return false;
 	}
 
-	if (fwrite(aFile->data, 1, aFile->size, fp) != aFile->size)
+	if (fwrite(aBuffer->data, 1, aBuffer->size, fp) != aBuffer->size)
 	{
 		fclose(fp);
 		return false;

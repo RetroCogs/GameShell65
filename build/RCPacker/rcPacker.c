@@ -51,13 +51,19 @@ int main(int argc, char *argv[])
 
 	{
 		File myFile;
-		File myBBFile;
-		File b3File;
+		Buffer myBBBuffer;
 		int exitCode = 0;
+		size_t outNameLen = strlen(fileName) + 4;
+		char *outName = (char *)malloc(outNameLen);
 
-		b3File.name = NULL;
-		b3File.data = NULL;
-		b3File.size = 0;
+		if (outName == NULL)
+		{
+			printf("Error: Out of memory while building output file name.\n");
+			return -1;
+		}
+
+		strncpy(outName, fileName, outNameLen - 4);
+		strncpy(outName + (outNameLen - 4), ".b2", 4);
 
 		if (!readFile(&myFile, fileName))
 		{
@@ -65,37 +71,43 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-		if (!crunch(&myFile, &myBBFile))
+		if (!crunch(&myFile, &myBBBuffer))
 		{
 			freeFile(&myFile);
+			free(outName);
 			return -1;
 		}
 
-		if (!writeFile(&myBBFile, myFile.name))
+		if (!writeFile(&myBBBuffer, outName))
 		{
-			printf("Error (B-2): Write file \"%s\", aborting.\n", myBBFile.name);
+			printf("Error (B-2): Write file \"%s\", aborting.\n", outName);
 			freeFile(&myFile);
-			freeFile(&myBBFile);
+			free(myBBBuffer.data);
+			free(outName);
 			return -1;
 		}
 
-		printf("ByteBoozer: \"%s\" -> \"%s\"\n", myFile.name, myBBFile.name);
+		printf("ByteBoozer: \"%s\" -> \"%s\"\n", myFile.name, outName);
 
 		if (doValidate)
 		{
-			exitCode = decrunchToMemory(&myBBFile, myFile.name, &b3File);
+			Buffer b3Buffer;
+
+			b3Buffer.data = NULL;
+			b3Buffer.size = 0;
+
+			exitCode = decrunchToMemory(&myBBBuffer, &b3Buffer);
 			if (exitCode == 0)
 			{
-				exitCode = validateOriginalVsB3(&myFile, &b3File);
+				exitCode = validateBuffers(&myFile.buffer, &b3Buffer);
 			}
+
+			free(b3Buffer.data);
 		}
 
 		freeFile(&myFile);
-		freeFile(&myBBFile);
-		if (doValidate)
-		{
-			freeFile(&b3File);
-		}
+		free(myBBBuffer.data);
+		free(outName);
 
 		return exitCode;
 	}

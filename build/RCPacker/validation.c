@@ -26,28 +26,27 @@ static bool compareBuffers(const byte *a, size_t aSize, const byte *b, size_t bS
 	return true;
 }
 
-int validateOriginalVsB3(const File *originalFile, const File *b3File)
+int validateBuffers(const Buffer *originalBuffer, const Buffer *roundTripBuffer)
 {
 	size_t diffOffset = 0;
 
-	printf("[Validate] Original size:   0x%08X bytes\n", (unsigned int)originalFile->size);
-	printf("[Validate] Round-trip size: 0x%08X bytes\n", (unsigned int)b3File->size);
+	printf("[Validate] Original size:   0x%08X bytes\n", (unsigned int)originalBuffer->size);
+	printf("[Validate] Round-trip size: 0x%08X bytes\n", (unsigned int)roundTripBuffer->size);
 
-	if (compareBuffers(originalFile->data, originalFile->size,
-				b3File->data, b3File->size, &diffOffset))
+	if (compareBuffers(originalBuffer->data, originalBuffer->size,
+				roundTripBuffer->data, roundTripBuffer->size, &diffOffset))
 	{
-		printf("Validation OK: \"%s\" matches original input.\n", b3File->name);
-		printf("[Validate] Compared bytes:  0x%08X\n", (unsigned int)originalFile->size);
+		printf("Validation OK: round-trip data matches original input.\n");
+		printf("[Validate] Compared bytes:  0x%08X\n", (unsigned int)originalBuffer->size);
 		return 0;
 	}
 
-	printf("Validation FAILED: \"%s\" differs from original at byte %zu.\n",
-		b3File->name, diffOffset);
-	if (diffOffset < originalFile->size && diffOffset < b3File->size)
+	printf("Validation FAILED: round-trip data differs from original at byte %zu.\n", diffOffset);
+	if (diffOffset < originalBuffer->size && diffOffset < roundTripBuffer->size)
 	{
 		printf("Expected 0x%02X, got 0x%02X\n",
-			(unsigned)originalFile->data[diffOffset],
-			(unsigned)b3File->data[diffOffset]);
+			(unsigned)originalBuffer->data[diffOffset],
+			(unsigned)roundTripBuffer->data[diffOffset]);
 	}
 
 	return 2;

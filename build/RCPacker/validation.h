@@ -3,6 +3,6 @@
 
 #include "file.h"
 
-int validateOriginalVsB3(const File *originalFile, const File *b3File);
+int validateBuffers(const Buffer *originalBuffer, const Buffer *roundTripBuffer);
 
 #endif

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 
 #include "decruncher.h"
@@ -13,23 +12,6 @@ typedef struct
 	byte curBitByte;
 	uint bitsLeft;
 } BitStream;
-
-static char *makeSuffixedName(const char *fileName, const char *suffix)
-{
-	size_t baseLen = strlen(fileName);
-	size_t suffixLen = strlen(suffix);
-	char *out = (char *)malloc(baseLen + suffixLen + 1);
-
-	if (out == NULL)
-	{
-		return NULL;
-	}
-
-	memcpy(out, fileName, baseLen);
-	memcpy(out + baseLen, suffix, suffixLen);
-	out[baseLen + suffixLen] = '\0';
-	return out;
-}
 
 static bool bsReadByte(BitStream *bs, byte *out)
 {
@@ -303,56 +285,45 @@ static bool decrunchPayload(const byte *packed, size_t packedSize, byte **outPay
 	return true;
 }
 
-int decrunchToMemory(const File *packedFile, const char *inputName, File *outB3File)
+int decrunchToMemory(const Buffer *packedBuffer, Buffer *outBuffer)
 {
 	byte *payload = NULL;
 	size_t payloadSize = 0;
-	char *b3Name;
 
-	outB3File->name = NULL;
-	outB3File->data = NULL;
-	outB3File->size = 0;
+	outBuffer->data = NULL;
+	outBuffer->size = 0;
 
-	if (packedFile->size < 8)
+	if (packedBuffer->size < 8)
 	{
 		printf("Error (B-3): Packed file too small (missing header).\n");
 		return -1;
 	}
 
-	uint32_t loadAddr = ((uint32_t)packedFile->data[0]) |
-		((uint32_t)packedFile->data[1] << 8) |
-		((uint32_t)packedFile->data[2] << 16) |
-		((uint32_t)packedFile->data[3] << 24);
-	uint32_t origSize = ((uint32_t)packedFile->data[4]) |
-		((uint32_t)packedFile->data[5] << 8) |
-		((uint32_t)packedFile->data[6] << 16) |
-		((uint32_t)packedFile->data[7] << 24);
+	uint32_t loadAddr = ((uint32_t)packedBuffer->data[0]) |
+		((uint32_t)packedBuffer->data[1] << 8) |
+		((uint32_t)packedBuffer->data[2] << 16) |
+		((uint32_t)packedBuffer->data[3] << 24);
+	uint32_t origSize = ((uint32_t)packedBuffer->data[4]) |
+		((uint32_t)packedBuffer->data[5] << 8) |
+		((uint32_t)packedBuffer->data[6] << 16) |
+		((uint32_t)packedBuffer->data[7] << 24);
 
-	printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedFile->size);
+	printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedBuffer->size);
 	printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
 	printf("[Decrunch] Original size:   0x%08X bytes\n", origSize);
-	printf("[Decrunch] Stream size:     0x%08X bytes\n", (unsigned int)(packedFile->size - 8));
+	printf("[Decrunch] Stream size:     0x%08X bytes\n", (unsigned int)(packedBuffer->size - 8));
 
-	if (!decrunchPayload(packedFile->data + 8, packedFile->size - 8, &payload, &payloadSize))
+	if (!decrunchPayload(packedBuffer->data + 8, packedBuffer->size - 8, &payload, &payloadSize))
 	{
-		printf("Error (B-4): Decrunch failed for \"%s\".\n", packedFile->name);
+		printf("Error (B-4): Decrunch failed.\n");
 		return -1;
 	}
 
-	b3Name = makeSuffixedName(inputName, ".b3");
-	if (b3Name == NULL)
-	{
-		printf("Error (B-6): Could not allocate .b3 file name.\n");
-		free(payload);
-		return -1;
-	}
-
-	outB3File->name = b3Name;
-	outB3File->data = payload;
-	outB3File->size = payloadSize;
+	outBuffer->data = payload;
+	outBuffer->size = payloadSize;
 
 	printf("[Decrunch] Output payload:  0x%08X bytes\n", (unsigned int)payloadSize);
-	printf("[Decrunch] Output .b3 size: 0x%08X bytes\n", (unsigned int)payloadSize);
+	printf("[Decrunch] Output size: 0x%08X bytes\n", (unsigned int)payloadSize);
 	printf("[Decrunch] Validation path: in-memory\n");
 
 	return 0;

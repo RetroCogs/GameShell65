@@ -749,14 +749,18 @@ int writeOutput()
 	return margin;
 }
 
-bool crunch(File *aSource, File *aTarget)
+bool crunch(const File *aSource, Buffer *outBuffer)
 {
 	uint i;
 	byte *target;
 
+	// Initialize output buffer
+	outBuffer->data = NULL;
+	outBuffer->size = 0;
+
 	// Executable mode strips 2-byte C64 load address; data mode is raw binary
 	uint headerSize = 0;
-	ibufSize = aSource->size - headerSize;
+	ibufSize = aSource->buffer.size - headerSize;
 	ibuf = (byte *)malloc(ibufSize);
 	context = (node *)malloc(sizeof(node) * ibufSize);
 	link = (uint *)malloc(sizeof(uint) * ibufSize);
@@ -765,7 +769,7 @@ bool crunch(File *aSource, File *aTarget)
 	// Load ibuf and clear context
 	for (i = 0; i < ibufSize; ++i)
 	{
-		ibuf[i] = aSource->data[i + headerSize];
+		ibuf[i] = aSource->buffer.data[i + headerSize];
 		context[i].cost = 0;
 		link[i] = 0;
 		rleInfo[i].length = 0;
@@ -785,7 +789,7 @@ bool crunch(File *aSource, File *aTarget)
 	}
 
 	printf("[Crunch] Input file size:   0x%08X bytes\n",
-		(unsigned int)aSource->size);
+		(unsigned int)aSource->buffer.size);
 	if (headerSize > 0)
 	{
 		printf("[Crunch] Input payload:     0x%08X bytes (file - 0x%08X-byte "
@@ -809,9 +813,9 @@ bool crunch(File *aSource, File *aTarget)
 
 	printf("[Crunch] Output size:       0x%08X bytes (full .b2)\n", fileLen);
 
-	aTarget->size = fileLen;
-	aTarget->data = (byte *)malloc(aTarget->size);
-	target = aTarget->data;
+	outBuffer->size = fileLen;
+	outBuffer->data = (byte *)malloc(outBuffer->size);
+	target = outBuffer->data;
 
 	// Not executable - raw binary: 8-byte header + packed stream
 	target[0] = (loadAddr) & 0xff;

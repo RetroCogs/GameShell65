@@ -4,6 +4,6 @@
 #include "bb.h"
 #include "file.h"
 
-bool crunch(File *aSource, File *aTarget);
+bool crunch(const File *aSource, Buffer *outBuffer);
 
 #endif // _cruncher_h_

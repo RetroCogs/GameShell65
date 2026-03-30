@@ -7,13 +7,17 @@
 #include <sys/stat.h>
 
 typedef struct {
-  char *name;
   size_t size;
   byte *data;
+} Buffer;
+
+typedef struct {
+  char *name;
+  Buffer buffer;
 } File;
 
 void freeFile(File *aFile);
 bool readFile(File *aFile, const char *fileName);
-bool writeFile(File *aFile, const char *fileName);
+bool writeFile(const Buffer *aBuffer, const char *fileName);
 
 #endif // _file_h_

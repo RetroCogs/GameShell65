@@ -3,6 +3,6 @@
 
 #include "file.h"
 
-int decrunchToMemory(const File *packedFile, const char *inputName, File *outB3File);
+int decrunchToMemory(const Buffer *packedBuffer, Buffer *outBuffer);
 
 #endif // _decruncher_h_
