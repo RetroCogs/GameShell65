@@ -5,7 +5,7 @@ CC = gcc
 CFLAGS = -g -Wall
 
 HEADERS = $(wildcard *.h)
-RC_SOURCES = rcPacker.c cruncher.c file.c decruncher.c
+RC_SOURCES = rcPacker.c cruncher.c file.c decruncher.c validation.c
 RC_OBJECTS = $(RC_SOURCES:.c=.o)
 
 .PHONY: default all clean
