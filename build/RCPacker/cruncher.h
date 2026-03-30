@@ -4,6 +4,6 @@
 #include "bb.h"
 #include "file.h"
 
-bool crunch(File *aSource, File *aTarget, uint startAdress, uint decrFlag, bool isRelocated);
+bool crunch(File *aSource, File *aTarget);
 
 #endif // _cruncher_h_
