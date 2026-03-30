@@ -61,15 +61,10 @@ bool readFile(File *aFile, const char *fileName)
 	return true;
 }
 
-bool writeFile(File *aFile, const char *fileName, const size_t startOffset)
+bool writeFile(File *aFile, const char *fileName)
 {
 	FILE *fp = NULL;
 	size_t length;
-
-	if (startOffset >= aFile->size)
-	{
-		return false;
-	}
 
 	length = strlen(fileName);
 	aFile->name = (char *)malloc(length + 4);
@@ -88,7 +83,7 @@ bool writeFile(File *aFile, const char *fileName, const size_t startOffset)
 		return false;
 	}
 
-	if (fwrite(aFile->data + startOffset, 1, aFile->size - startOffset, fp) != aFile->size - startOffset)
+	if (fwrite(aFile->data, 1, aFile->size, fp) != aFile->size)
 	{
 		fclose(fp);
 		return false;
