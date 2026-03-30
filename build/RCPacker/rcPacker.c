@@ -93,9 +93,6 @@ int main(int argc, char *argv[])
 		{
 			Buffer b3Buffer;
 
-			b3Buffer.data = NULL;
-			b3Buffer.size = 0;
-
 			exitCode = decrunchToMemory(&myBBBuffer, &b3Buffer);
 			if (exitCode == 0)
 			{
