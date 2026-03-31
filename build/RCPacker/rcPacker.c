@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <vector>
+#include <string>
 
 #include "file.h"
 #include "cruncher.h"
@@ -13,8 +15,7 @@ int main(int argc, char *argv[])
 	int doValidate = 0;
 	int doPadding = 0;
 	char *outputNameArg = NULL;
-	char **inputFiles = NULL;
-	int inputCount = 0;
+	std::vector<std::string> inputFiles;
 	int argi;
 
 	if (argc == 1)
@@ -25,13 +26,6 @@ int main(int argc, char *argv[])
 		printf("\t-p  round each file start to 256 bytes\n");
 		printf("\t-v  decrunch and validate after packing\n");
 		return 0;
-	}
-
-	inputFiles = (char **)malloc(sizeof(char *) * argc);
-	if (inputFiles == NULL)
-	{
-		printf("Error: Out of memory while parsing arguments.\n");
-		return -1;
 	}
 
 	for (argi = 1; argi < argc; argi++)
@@ -46,7 +40,6 @@ int main(int argc, char *argv[])
 			{
 				printf("Error: Missing filename after -o.\n");
 				printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
-				free(inputFiles);
 				return -1;
 			}
 			outputNameArg = argv[++argi];
@@ -59,20 +52,18 @@ int main(int argc, char *argv[])
 		{
 			printf("Error: Unknown argument \"%s\".\n", argv[argi]);
 			printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
-			free(inputFiles);
 			return -1;
 		}
 		else
 		{
-			inputFiles[inputCount++] = argv[argi];
+			inputFiles.push_back(argv[argi]);
 		}
 	}
 
-	if (inputCount == 0)
+	if (inputFiles.empty())
 	{
 		printf("Error: Missing input file.\n");
 		printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
-		free(inputFiles);
 		return -1;
 	}
 
@@ -84,9 +75,9 @@ int main(int argc, char *argv[])
 		size_t totalPaddingBytes = 0;
 		size_t outNameLen;
 		char *outName = NULL;
-		int fileIndex;
+		size_t fileIndex;
 
-		sourceFile.name = inputFiles[0];
+		sourceFile.name = NULL;
 		sourceFile.buffer.data = NULL;
 		sourceFile.buffer.size = 0;
 		myBBBuffer.data = NULL;
@@ -98,7 +89,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			outNameLen = strlen(inputFiles[0]) + 4;
+			outNameLen = inputFiles[0].size() + 4;
 		}
 
 		outName = (char *)malloc(outNameLen);
@@ -106,7 +97,6 @@ int main(int argc, char *argv[])
 		if (outName == NULL)
 		{
 			printf("Error: Out of memory while building output file name.\n");
-			free(inputFiles);
 			return -1;
 		}
 
@@ -116,39 +106,43 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			strncpy(outName, inputFiles[0], outNameLen - 4);
+			strncpy(outName, inputFiles[0].c_str(), outNameLen - 4);
 			strncpy(outName + (outNameLen - 4), ".b2", 4);
 		}
 
-		for (fileIndex = 0; fileIndex < inputCount; fileIndex++)
+		for (fileIndex = 0; fileIndex < inputFiles.size(); fileIndex++)
 		{
 			File partFile;
 			size_t padBytes = 0;
+			size_t startOffset = sourceFile.buffer.size;
 			size_t newSize;
 			byte *newData;
 
-			if (!readFile(&partFile, inputFiles[fileIndex]))
+			if (!readFile(&partFile, inputFiles[fileIndex].c_str()))
 			{
-				printf("Error (B-1): Open file \"%s\", aborting.\n", inputFiles[fileIndex]);
+				printf("Error (B-1): Open file \"%s\", aborting.\n", inputFiles[fileIndex].c_str());
 				free(sourceFile.buffer.data);
 				free(outName);
-				free(inputFiles);
 				return -1;
 			}
 
-			if (doPadding > 0 && sourceFile.buffer.size > 0)
+			if (doPadding > 0)
 			{
-				padBytes = (size_t)(doPadding - (sourceFile.buffer.size % (size_t)doPadding)) % (size_t)doPadding;
+				/* Pad this file's end so the next file starts at a 256-byte boundary. */
+				if ((fileIndex + 1) < inputFiles.size())
+				{
+					padBytes = ((size_t)doPadding - (partFile.buffer.size % (size_t)doPadding)) % (size_t)doPadding;
+				}
 			}
 
-			printf("  input[%d]: \"%s\" (%zu bytes", fileIndex + 1, inputFiles[fileIndex], partFile.buffer.size);
-			if (padBytes > 0)
-			{
-				printf(", +%zu pad", padBytes);
-			}
-			printf(")\n");
+			printf("  input[%02zu]  start=$%08X  size=$%08X  pad=$%08X  \"%s\"\n",
+				fileIndex + 1,
+				(unsigned int)startOffset,
+				(unsigned int)partFile.buffer.size,
+				(unsigned int)padBytes,
+				inputFiles[fileIndex].c_str());
 
-			newSize = sourceFile.buffer.size + padBytes + partFile.buffer.size;
+			newSize = sourceFile.buffer.size + partFile.buffer.size + padBytes;
 			newData = (byte *)realloc(sourceFile.buffer.data, newSize);
 			if (newData == NULL)
 			{
@@ -156,18 +150,18 @@ int main(int argc, char *argv[])
 				freeFile(&partFile);
 				free(sourceFile.buffer.data);
 				free(outName);
-				free(inputFiles);
 				return -1;
 			}
 
 			sourceFile.buffer.data = newData;
-			if (padBytes > 0)
-			{
-				memset(sourceFile.buffer.data + sourceFile.buffer.size, 0, padBytes);
-			}
-			memcpy(sourceFile.buffer.data + sourceFile.buffer.size + padBytes,
+			memcpy(sourceFile.buffer.data + sourceFile.buffer.size,
 				partFile.buffer.data,
 				partFile.buffer.size);
+			if (padBytes > 0)
+			{
+				/* Keep padding deterministic and highly compressible. */
+				memset(sourceFile.buffer.data + sourceFile.buffer.size + partFile.buffer.size, 0, padBytes);
+			}
 			sourceFile.buffer.size = newSize;
 			totalInputBytes += partFile.buffer.size;
 			totalPaddingBytes += padBytes;
@@ -179,7 +173,6 @@ int main(int argc, char *argv[])
 		{
 			free(sourceFile.buffer.data);
 			free(outName);
-			free(inputFiles);
 			return -1;
 		}
 
@@ -189,15 +182,14 @@ int main(int argc, char *argv[])
 			free(sourceFile.buffer.data);
 			free(myBBBuffer.data);
 			free(outName);
-			free(inputFiles);
 			return -1;
 		}
 
 		printf("ByteBoozer summary:\n");
-		printf("  files: %d\n", inputCount);
-		printf("  source bytes: %zu\n", totalInputBytes);
-		printf("  padding bytes: %zu\n", totalPaddingBytes);
-		printf("  packed bytes: %zu\n", myBBBuffer.size);
+		printf("  files         : $%08X\n", (unsigned int)inputFiles.size());
+		printf("  source bytes  : $%08X\n", (unsigned int)totalInputBytes);
+		printf("  padding bytes : $%08X\n", (unsigned int)totalPaddingBytes);
+		printf("  packed bytes  : $%08X\n", (unsigned int)myBBBuffer.size);
 		if (sourceFile.buffer.size > 0)
 		{
 			double ratio = (double)myBBBuffer.size * 100.0 / (double)sourceFile.buffer.size;
@@ -224,7 +216,6 @@ int main(int argc, char *argv[])
 		free(sourceFile.buffer.data);
 		free(myBBBuffer.data);
 		free(outName);
-		free(inputFiles);
 
 		return exitCode;
 	}
