@@ -17,7 +17,6 @@ ifeq ($(windows), 1)
 	MEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	EMEGA65_FTP=d:/PCTOOLS/mega65_ftp.exe
 	ETHERLOAD=d:/PCTOOLS/etherload.exe
-	MEGATOOL=$(GSBUILD)/megatool/megatool.exe
 else
 	KICK=./build/KickAss65CE02-5.24f.jar
 	C1541=/opt/homebrew/Cellar/vice/3.8/bin/c1541
@@ -25,7 +24,6 @@ else
 	MEGA65_FTP=~/Applications/Mega65/mega65_ftp.osx
 	EMEGA65_FTP=~/Documents/MEGA65/mega65_ftp.osx
 	ETHERLOAD=~/Documents/MEGA65/etherload.osx
-	MEGATOOL=$(GSBUILD)/megatool/macmegatool.exe
 endif
 
 all: data datablobs code disk
@@ -46,9 +44,6 @@ datablobs: data
 
 code:
 	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -libDir $(GSINC) -odir bin $(APPNAME).asm -symbolfile -bytedumpfile $(APPNAME).klist
-
-# 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
-# 	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
 
 map:
 	$(LDTK65) --ncm --workdir "./assets/" --input "bg2.ldtk" --output "sdcard"
