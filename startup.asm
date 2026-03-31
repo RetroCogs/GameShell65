@@ -160,11 +160,6 @@
 //
 .segment Zeropage "Main zeropage"
 
-DeBits:			.byte $00,$00						// Used for bit unpacking in decruncher
-DePut:			.word $0000,$0000					// Used for put unpacking in decruncher, note this is 16 bit as some crunchers need > 256 byte lookahead
-DeSize:			.word $0000,$0000					// Used for size unpacking in decruncher
-DeGet:			.word $0000,$0000					// Used for get unpacking in decruncher	
-
 Tmp:			.word $0000,$0000			// General reusable data (Don't use in IRQ)
 Tmp1:			.word $0000,$0000
 Tmp2:			.word $0000,$0000

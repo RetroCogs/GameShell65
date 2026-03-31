@@ -29,30 +29,6 @@
 .const decomp_offhi        = decomp_base + 16  // 1 byte signed high offset byte
 .const decomp_offsign      = decomp_base + 17  // 1 byte sign-extension helper
 
-.macro decomp_set32im(value, dst)
-{
-	lda #<value
-	sta dst + 0
-	lda #>value
-	sta dst + 1
-	lda #[value >> 16]
-	sta dst + 2
-	lda #[value >> 24]
-	sta dst + 3
-}
-
-.macro decomp_inc32(ptr)
-{
-	inc ptr + 0
-	bne !+
-	inc ptr + 1
-	bne !+
-	inc ptr + 2
-	bne !+
-	inc ptr + 3
-!:
-}
-
 .macro GetNextBit()
 {
 	asl decomp_bits
@@ -75,16 +51,16 @@ _end:
 
 .macro Decomp32(srcAddr, dstAddr)
 {
-	decomp_set32im(srcAddr, decomp_get)
-	decomp_set32im(dstAddr, decomp_put)
+	_set32im(srcAddr, decomp_get)
+	_set32im(dstAddr, decomp_put)
 	jsr DecompSkipHeader
 	jsr Decomp
 }
 
 .macro DecompRaw32(srcAddr, dstAddr)
 {
-	decomp_set32im(srcAddr, decomp_get)
-	decomp_set32im(dstAddr, decomp_put)
+	_set32im(srcAddr, decomp_get)
+	_set32im(dstAddr, decomp_put)
 	jsr Decomp
 }
 
@@ -103,7 +79,7 @@ DecompOffsetTab:
 GetNextByte:
 	ldz #$00
 	lda ((decomp_get)),z
-	decomp_inc32(decomp_get)
+	_inc32(decomp_get)
 	rts
 
 // Refill bit reservoir from packed stream.
@@ -143,7 +119,7 @@ LLoop:
 	jsr GetNextByte
 	ldz #$00
 	sta ((decomp_put)),z
-	decomp_inc32(decomp_put)
+	_inc32(decomp_put)
 	dec decomp_len
 	bne LLoop
 	lda decomp_lenfield
@@ -222,8 +198,8 @@ MLoop:
 	ldz #$00
 	lda ((decomp_msrc)),z
 	sta ((decomp_put)),z
-	decomp_inc32(decomp_msrc)
-	decomp_inc32(decomp_put)
+	_inc32(decomp_msrc)
+	_inc32(decomp_put)
 	dec decomp_len
 	bne MLoop
 	jmp DLoop
