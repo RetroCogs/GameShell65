@@ -12,18 +12,26 @@ int main(int argc, char *argv[])
 {
 	int doValidate = 0;
 	int doPadding = 0;
-	char *fileName = NULL;
+	char *outputNameArg = NULL;
+	char **inputFiles = NULL;
+	int inputCount = 0;
 	int argi;
-
-	printf("argc = %d\n", argc);
 
 	if (argc == 1)
 	{
 		printf("RCPacker [packer for Mega65] usage:\n");
-		printf("\trcpacker <input_file> [-p] [-v]\n");
+		printf("\trcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+		printf("\t-o  output file name (default: first input + .b2)\n");
 		printf("\t-p  round each file start to 256 bytes\n");
 		printf("\t-v  decrunch and validate after packing\n");
 		return 0;
+	}
+
+	inputFiles = (char **)malloc(sizeof(char *) * argc);
+	if (inputFiles == NULL)
+	{
+		printf("Error: Out of memory while parsing arguments.\n");
+		return -1;
 	}
 
 	for (argi = 1; argi < argc; argi++)
@@ -32,85 +40,191 @@ int main(int argc, char *argv[])
 		{
 			doPadding = 0x100;
 		}
+		else if (strcmp(argv[argi], "-o") == 0)
+		{
+			if ((argi + 1) >= argc)
+			{
+				printf("Error: Missing filename after -o.\n");
+				printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+				free(inputFiles);
+				return -1;
+			}
+			outputNameArg = argv[++argi];
+		}
 		else if (strcmp(argv[argi], "-v") == 0)
 		{
 			doValidate = 1;
 		}
-		else if (fileName == NULL)
+		else if (argv[argi][0] == '-')
 		{
-			fileName = argv[argi];
+			printf("Error: Unknown argument \"%s\".\n", argv[argi]);
+			printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+			free(inputFiles);
+			return -1;
 		}
 		else
 		{
-			printf("Error: Unknown argument \"%s\".\n", argv[argi]);
-			printf("Usage: rcpacker <input_file> [-v]\n");
-			return -1;
+			inputFiles[inputCount++] = argv[argi];
 		}
 	}
 
-	if (fileName == NULL)
+	if (inputCount == 0)
 	{
 		printf("Error: Missing input file.\n");
-		printf("Usage: rcpacker <input_file> [-v]\n");
+		printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+		free(inputFiles);
 		return -1;
 	}
 
 	{
-		File myFile;
+		File sourceFile;
 		Buffer myBBBuffer;
 		int exitCode = 0;
-		size_t outNameLen = strlen(fileName) + 4;
-		char *outName = (char *)malloc(outNameLen);
+		size_t totalInputBytes = 0;
+		size_t totalPaddingBytes = 0;
+		size_t outNameLen;
+		char *outName = NULL;
+		int fileIndex;
+
+		sourceFile.name = inputFiles[0];
+		sourceFile.buffer.data = NULL;
+		sourceFile.buffer.size = 0;
+		myBBBuffer.data = NULL;
+		myBBBuffer.size = 0;
+
+		if (outputNameArg != NULL)
+		{
+			outNameLen = strlen(outputNameArg) + 1;
+		}
+		else
+		{
+			outNameLen = strlen(inputFiles[0]) + 4;
+		}
+
+		outName = (char *)malloc(outNameLen);
 
 		if (outName == NULL)
 		{
 			printf("Error: Out of memory while building output file name.\n");
+			free(inputFiles);
 			return -1;
 		}
 
-		strncpy(outName, fileName, outNameLen - 4);
-		strncpy(outName + (outNameLen - 4), ".b2", 4);
-
-		if (!readFile(&myFile, fileName))
+		if (outputNameArg != NULL)
 		{
-			printf("Error (B-1): Open file \"%s\", aborting.\n", fileName);
-			return -1;
+			strcpy(outName, outputNameArg);
+		}
+		else
+		{
+			strncpy(outName, inputFiles[0], outNameLen - 4);
+			strncpy(outName + (outNameLen - 4), ".b2", 4);
 		}
 
-		if (!crunch(&myFile, &myBBBuffer))
+		for (fileIndex = 0; fileIndex < inputCount; fileIndex++)
 		{
-			freeFile(&myFile);
+			File partFile;
+			size_t padBytes = 0;
+			size_t newSize;
+			byte *newData;
+
+			if (!readFile(&partFile, inputFiles[fileIndex]))
+			{
+				printf("Error (B-1): Open file \"%s\", aborting.\n", inputFiles[fileIndex]);
+				free(sourceFile.buffer.data);
+				free(outName);
+				free(inputFiles);
+				return -1;
+			}
+
+			if (doPadding > 0 && sourceFile.buffer.size > 0)
+			{
+				padBytes = (size_t)(doPadding - (sourceFile.buffer.size % (size_t)doPadding)) % (size_t)doPadding;
+			}
+
+			printf("  input[%d]: \"%s\" (%zu bytes", fileIndex + 1, inputFiles[fileIndex], partFile.buffer.size);
+			if (padBytes > 0)
+			{
+				printf(", +%zu pad", padBytes);
+			}
+			printf(")\n");
+
+			newSize = sourceFile.buffer.size + padBytes + partFile.buffer.size;
+			newData = (byte *)realloc(sourceFile.buffer.data, newSize);
+			if (newData == NULL)
+			{
+				printf("Error: Out of memory while concatenating input files.\n");
+				freeFile(&partFile);
+				free(sourceFile.buffer.data);
+				free(outName);
+				free(inputFiles);
+				return -1;
+			}
+
+			sourceFile.buffer.data = newData;
+			if (padBytes > 0)
+			{
+				memset(sourceFile.buffer.data + sourceFile.buffer.size, 0, padBytes);
+			}
+			memcpy(sourceFile.buffer.data + sourceFile.buffer.size + padBytes,
+				partFile.buffer.data,
+				partFile.buffer.size);
+			sourceFile.buffer.size = newSize;
+			totalInputBytes += partFile.buffer.size;
+			totalPaddingBytes += padBytes;
+
+			freeFile(&partFile);
+		}
+
+		if (!crunch(&sourceFile, &myBBBuffer))
+		{
+			free(sourceFile.buffer.data);
 			free(outName);
+			free(inputFiles);
 			return -1;
 		}
 
 		if (!writeFile(&myBBBuffer, outName))
 		{
 			printf("Error (B-2): Write file \"%s\", aborting.\n", outName);
-			freeFile(&myFile);
+			free(sourceFile.buffer.data);
 			free(myBBBuffer.data);
 			free(outName);
+			free(inputFiles);
 			return -1;
 		}
 
-		printf("ByteBoozer: \"%s\" -> \"%s\"\n", myFile.name, outName);
+		printf("ByteBoozer summary:\n");
+		printf("  files: %d\n", inputCount);
+		printf("  source bytes: %zu\n", totalInputBytes);
+		printf("  padding bytes: %zu\n", totalPaddingBytes);
+		printf("  packed bytes: %zu\n", myBBBuffer.size);
+		if (sourceFile.buffer.size > 0)
+		{
+			double ratio = (double)myBBBuffer.size * 100.0 / (double)sourceFile.buffer.size;
+			printf("  packed ratio: %.2f%%\n", ratio);
+		}
+		printf("  output: \"%s\"\n", outName);
 
 		if (doValidate)
 		{
 			Buffer b3Buffer;
 
+			b3Buffer.data = NULL;
+			b3Buffer.size = 0;
+
 			exitCode = decrunchToMemory(&myBBBuffer, &b3Buffer);
 			if (exitCode == 0)
 			{
-				exitCode = validateBuffers(&myFile.buffer, &b3Buffer);
+				exitCode = validateBuffers(&sourceFile.buffer, &b3Buffer);
 			}
 
 			free(b3Buffer.data);
 		}
 
-		freeFile(&myFile);
+		free(sourceFile.buffer.data);
 		free(myBBBuffer.data);
 		free(outName);
+		free(inputFiles);
 
 		return exitCode;
 	}
