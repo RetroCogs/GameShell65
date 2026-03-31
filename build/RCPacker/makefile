@@ -1,8 +1,8 @@
 TARGET = rcPacker
 
 LIBS = -lm
-CC = gcc
-CFLAGS = -g -Wall
+CXX = g++
+CXXFLAGS = -g -Wall -std=c++17 -x c++
 
 HEADERS = $(wildcard *.h)
 RC_SOURCES = rcPacker.c cruncher.c file.c decruncher.c validation.c
@@ -14,12 +14,12 @@ default: $(TARGET)
 all: default
 
 %.o: %.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 .PRECIOUS: $(TARGET) $(RC_OBJECTS)
 
 $(TARGET): $(RC_OBJECTS)
-	$(CC) $(RC_OBJECTS) -Wall -std=c11 $(LIBS) -o $@
+	$(CXX) $(RC_OBJECTS) $(LIBS) -o $@
 
 run: $(TARGET)
 	./$(TARGET) ./FirstShotPAL.bin

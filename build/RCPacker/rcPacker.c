@@ -11,6 +11,7 @@
 int main(int argc, char *argv[])
 {
 	int doValidate = 0;
+	int doPadding = 0;
 	char *fileName = NULL;
 	int argi;
 
@@ -19,14 +20,19 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 		printf("RCPacker [packer for Mega65] usage:\n");
-		printf("\trcpacker <input_file> [-v]\n");
+		printf("\trcpacker <input_file> [-p] [-v]\n");
+		printf("\t-p  round each file start to 256 bytes\n");
 		printf("\t-v  decrunch and validate after packing\n");
 		return 0;
 	}
 
 	for (argi = 1; argi < argc; argi++)
 	{
-		if (strcmp(argv[argi], "-v") == 0)
+		if (strcmp(argv[argi], "-p") == 0)
+		{
+			doPadding = 0x100;
+		}
+		else if (strcmp(argv[argi], "-v") == 0)
 		{
 			doValidate = 1;
 		}

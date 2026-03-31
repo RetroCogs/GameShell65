@@ -648,17 +648,17 @@ void findMatches()
 
 		// If literal run is first or cheapest way to get here
 		// then update node
-		node *this = &context[get];
-		if (this->cost == 0 || this->cost >= litCost)
+		node *thisNode = &context[get];
+		if (thisNode->cost == 0 || thisNode->cost >= litCost)
 		{
-			this->cost = litCost;
-			this->next = get + 1;
-			this->litLen = litLen;
+			thisNode->cost = litCost;
+			thisNode->next = get + 1;
+			thisNode->litLen = litLen;
 		}
 
-		lastNode.cost = this->cost;
-		lastNode.next = this->next;
-		lastNode.litLen = this->litLen;
+		lastNode.cost = thisNode->cost;
+		lastNode.next = thisNode->next;
+		lastNode.litLen = thisNode->litLen;
 
 		// Loop to the next position
 		get--;

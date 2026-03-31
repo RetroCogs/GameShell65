@@ -182,8 +182,6 @@ GameStateData:		.byte $00,$00,$00
 SaveState:			.dword 0
 SaveStateEnd:
 
-.const testDecomp = $B000
-
 //--------------------------------------------------------
 // Main
 //--------------------------------------------------------
@@ -200,6 +198,7 @@ SaveStateEnd:
 .const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
 .const sprFont = AddAsset("F", "sdcard/font_chr.bin")
 .const sprite32x32Chars = AddAsset("F", "sdcard/32x32sprite_chr.bin")
+.const sprite32x32Chars2 = AddAsset("F", "sdcard/32x32sprite2_chr.bin")
 .const bgCharsEnd = EndSection()
 
 .print "--------"
@@ -269,7 +268,7 @@ Entry:
 	// initialise fast load (start drive motor)
 	jsr fl_init
 
-	LoadFile(testDecomp + iffl1.crunchAddress, iffl1.filenamePtr)
+	LoadFile(sprite32x32Chars2.addr + iffl1.crunchAddress, iffl1.filenamePtr)
 	
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	DecrunchFile(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
@@ -280,7 +279,7 @@ Entry:
 	// ldy #>(testDecomp + iffl1.crunchAddress)
 	// jsr Decrunch
 
-	Decomp32(testDecomp + iffl1.crunchAddress, testDecomp)
+	Decomp32(sprite32x32Chars2.addr + iffl1.crunchAddress, sprite32x32Chars2.addr)
 
 	// done loading. stop drive motor
 	jsr fl_exit
