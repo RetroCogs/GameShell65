@@ -8,8 +8,8 @@
 .const zp_base		= $02       	// -
 .const bits			= zp_base   	// 1
 .const put			= bits + 2 		// 4
-.const size			= put + 4 		// 4
-.const get			= size + 4 		// 4
+.const mlda			= put + 4 		// 4
+.const get			= mlda + 4 		// 4
 
 // ------------------------------------------------------------------
 //
@@ -53,8 +53,8 @@ _end:
 //
 GetNewBits:
 Get1:
-	ldy $feed,x
-	sty bits
+	ldz $feed,x
+	stz bits
 	rol bits
 	inx
 	bne GnbEnd
@@ -87,6 +87,8 @@ Decrunch:
 	lda #$80
 	sta bits
 DLoop:
+	inc $d020
+	
 	GetNextBit()
 	bcs Match
 
@@ -95,7 +97,7 @@ Literal:
 	GetLen()
 	sta LLen+1
 
-	ldy #0
+	ldz #0
 LLoop:
 Get3:	
 	lda $feed,x
@@ -103,20 +105,24 @@ Get3:
 	bne L1
 	jsr GnbInc
 L1:
-	sta (put),y
-	iny
+	sta ((put)),z
+	inz
 LLen:
-	cpy #0
+	cpz #0
 	bne LLoop
 
 	clc
-	tya
+	tza
 	adc put
 	sta put
 	bcc !+
 	inc put+1
+	bne !+
+	inc put+2
+	bne !+
+	inc	put+3
 !:
-	iny
+	inz
 	beq DLoop
 
 	// Has to continue with a match..
@@ -151,7 +157,7 @@ M_1:
 M8:
 	// Get byte
 	eor #$ff
-	tay
+	taz
 Get2:
 	lda $feed,x
 	inx
@@ -159,31 +165,39 @@ Get2:
 	jsr GnbInc
 	jmp Mdone
 MShort:
-	ldy #$ff
+	ldz #$ff
 Mdone:
 	//clc
 	adc put
-	sta MLda+1
-	tya
+	sta mlda+0
+	tza
 	adc put+1
-	sta MLda+2
+	sta mlda+1
+	lda put+2
+	sta mlda+2
+	lda put+3
+	sta mlda+3
 
-	ldy #$ff
+	ldz #$ff
 MLoop:
-	iny
+	inz
 MLda:
-	lda $beef,y
-	sta (put),y
+	lda ((mlda)),z
+	sta ((put)),z
 MLen:
-	cpy #0
+	cpz #0
 	bne MLoop
 
 	//sec
-	tya
+	tza
 	adc put
 	sta put
 	bcc !+
 	inc put+1
+	bne !+
+	inc put+2
+	bne !+
+	inc put+3
 !:
 	jmp DLoop
 
