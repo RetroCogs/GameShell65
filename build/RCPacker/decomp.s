@@ -6,6 +6,67 @@
 // packed source pointer, output pointer, and match source pointer as full
 // 32-bit zero-page values and accesses memory through ((ptr)),z.
 //
+// Algorithm overview:
+//
+// The compressed stream is a sequence of tokens encoded at bit granularity.
+// Each top-level token begins with one control bit:
+// - 0 = literal run
+// - 1 = match/back-reference
+//
+// Literal token flow:
+// 1) Decode a variable-length count with GetLen.
+// 2) Copy exactly that many raw bytes from packed source to output.
+// 3) If the literal length was $FF, the next token starts at DLoop.
+// 4) Otherwise the format immediately continues with a match token, so the
+//    code jumps directly into Match without consuming another top-level bit.
+//
+// Match token flow:
+// 1) Decode a variable-length length field with GetLen.
+// 2) If the field is $FF, this is EOF and the routine returns.
+// 3) Otherwise actual copy length is `lenField + 1`.
+// 4) Read selector bits to choose one of 8 offset encodings from
+//    DecompOffsetTab.
+// 5) Decode the match offset, build a 32-bit match source pointer, and copy
+//    bytes from already-written output into the current output position.
+//
+// Length coding:
+// - GetLen starts with A = 1.
+// - It repeatedly reads a continuation bit.
+// - If that bit is 0, decoding ends.
+// - If it is 1, another bit is rotated into A and the process repeats.
+// - This is the same coding used by the original ByteBoozer decruncher.
+//
+// Bit handling:
+// - decomp_bits is a one-byte shift register.
+// - GetNextBit shifts one bit out with ASL.
+// - When the register empties, GetNewBits fetches a new packed byte and uses
+//   ROL so the fetched byte enters with the same carry semantics as the
+//   original routine.
+// - GetNewBits must preserve A, because GetLen depends on A holding the
+//   in-progress decoded length.
+//
+// 32-bit adaptation details:
+// - decomp_get is the 32-bit packed source pointer.
+// - decomp_put is the 32-bit output pointer.
+// - decomp_msrc is the 32-bit source pointer used for match copies.
+// - All memory accesses are done through ((ptr)),z with Z normally set to 0.
+// - Pointer advancement is done explicitly with decomp_inc32.
+// - Match offsets are decoded as signed 16-bit deltas and then sign-extended
+//   into a full 32-bit address calculation against decomp_put.
+//
+// Header handling:
+// - Decomp32 expects a full .b2 stream and skips the initial 8-byte header
+//   (load address + original size).
+// - DecompRaw32 expects decomp_get to already point at the packed payload.
+// - In both cases, the destination address is supplied by the caller and is
+//   not taken from the stream header.
+//
+// Important behavioral constraint:
+// - This routine mirrors the original token sequencing exactly.
+// - In particular, normal literal runs fall through into a match token rather
+//   than restarting token decode, which is required to stay in sync with the
+//   stream format.
+//
 // Usage options:
 // 1) Decomp32(src, dst)
 //    - src points at the start of a .b2 stream, including 8-byte header.
