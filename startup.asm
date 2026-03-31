@@ -276,7 +276,7 @@ Entry:
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	DecrunchFile(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 	
-	_set32im(testDecomp, DePut)
+	_set16im(testDecomp, DePut)
 
 	ldx #<(testDecomp + iffl1.crunchAddress)
 	ldy #>(testDecomp + iffl1.crunchAddress)
@@ -300,7 +300,7 @@ Entry:
 	jsr InitBGMap
 
 	// Setup the initial game state
-	lda #GStatePlay
+	lda #GStateTitles
 	sta RequestGameState
 	jsr SwitchGameStates
 
