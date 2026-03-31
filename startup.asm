@@ -1,7 +1,8 @@
 // Only Segments Code and Data are included in the .prg, BSS and ZP are virtual
 // and must be proerly initialized.
 //
-.file [name="startup.prg", type="bin", segments="Code,Data"]
+.file [name="startup.prg", segments="Code,Data"]
+
 .cpu _45gs02				
 
 #define USE_DBG				// enable to see raster costs
@@ -18,7 +19,7 @@
 
 // --------------
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
-.segmentdef Code [start=$2000, max=$cfff]
+.segmentdef Code [start=$2001, max=$cfff]
 .segmentdef Data [startAfter="Code", max=$cfff]
 
 .segmentdef MappedPixieWorkRam [start=$8000, max=$bfff, virtual]
@@ -186,9 +187,9 @@ SaveStateEnd:
 // Main
 //--------------------------------------------------------
 .segment Code
-
-* = $2000
-	jmp Entry
+BasicUpstart65(Main)
+* = $2016 "Basic Entry"
+Main: jmp Entry
 
 .print "--------"
 
@@ -198,21 +199,19 @@ SaveStateEnd:
 .const bg2Chars = AddAsset("F", "sdcard/bg22_chr.bin")
 .const sprFont = AddAsset("F", "sdcard/font_chr.bin")
 .const sprite32x32Chars = AddAsset("F", "sdcard/32x32sprite_chr.bin")
-.const sprite32x32Chars2 = AddAsset("F", "sdcard/32x32sprite2_chr.bin")
 .const bgCharsEnd = EndSection()
 
 .print "--------"
 
 .const blobsBegin = StartSection("iffl", $00000, $40000)
-.const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin.addr.mc")
-.const iffl1 = AddAsset("FS-IFFL1", "sdcard/32x32sprite2_chr.bin.b2")
+.const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin")
 .const blobsEnd = EndSection()
 
 .print "--------"
 
-#import "layers_code.s"
 #import "layout_code.s"
 #import "assets_code.s"
+#import "layers_code.s"
 #import "system_code.s"
 #import "fastLoader.s"
 #import "decruncher.s"
@@ -232,8 +231,8 @@ SaveStateEnd:
 // ------------------------------------------------------------
 //
 .segment Code "Entry"
-Entry: 
-{
+Entry:
+{	
 	jsr System.Initialization1
 
 	// Init the raster IRQ
@@ -268,18 +267,8 @@ Entry:
 	// initialise fast load (start drive motor)
 	jsr fl_init
 
-	LoadFile(sprite32x32Chars2.addr + iffl1.crunchAddress, iffl1.filenamePtr)
-	
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
-	DecrunchFile(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
-	
-	// _set32im(testDecomp, DePut)
-
-	// ldx #<(testDecomp + iffl1.crunchAddress)
-	// ldy #>(testDecomp + iffl1.crunchAddress)
-	// jsr Decrunch
-
-	Decomp32(sprite32x32Chars2.addr + iffl1.crunchAddress, sprite32x32Chars2.addr)
+	Decomp32(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 
 	// done loading. stop drive motor
 	jsr fl_exit
@@ -310,7 +299,7 @@ Entry:
 
 	// initialize dpad data	
 	jsr System.InitDPad
-		
+
 mainloop:
 	WaitVblank()
 

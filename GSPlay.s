@@ -230,7 +230,7 @@ UpdateObjData:
 //
 DrawObjData:
 {
-	_set16im(sprite32x32Chars2.baseChar, DrawBaseChr)			// Start charIndx with first pixie char
+	_set16im(sprite32x32Chars.baseChar, DrawBaseChr)			// Start charIndx with first pixie char
 
 	_set8im((PAL_SPR << 4) | $0f, DrawPal)
 

@@ -32,27 +32,23 @@ all: data datablobs code disk
 
 disk: 
 	$(C1541) -format "game shell 65,0" d81 $(DISKNAME)
-	$(C1541) -attach $(DISKNAME) 8 -write bin/$(APPNAME).prg.addr.mc "game shell 65"
-	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin.addr.mc "fs-iffl0"
-	$(C1541) -attach $(DISKNAME) 8 -write sdcard/32x32sprite2_chr.bin.b2 "fs-iffl1"
+	$(C1541) -attach $(DISKNAME) 8 -write bin/$(APPNAME).prg "game shell 65"
+	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin "fs-iffl0"
 
-datablobs:
-	$(MEGATOOL) -p 00000100 \
+datablobs: data
+	build/RCPacker/rcpacker -p -v \
 		sdcard/bg20_chr.bin \
 		sdcard/bg21_chr.bin \
 		sdcard/bg22_chr.bin \
 		sdcard/font_chr.bin \
 		sdcard/32x32sprite_chr.bin \
-		sdcard/data.bin
-	$(MEGATOOL) -a sdcard/data.bin 00000000
-	$(MEGATOOL) -c sdcard/data.bin.addr
-
-	build/RCPacker/rcpacker -v sdcard/32x32sprite2_chr.bin
+		-o sdcard/data.bin
 
 code:
 	java -cp $(KICK) kickass.KickAssembler65CE02 -showmem -libDir $(GSINC) -odir bin $(APPNAME).asm -symbolfile -bytedumpfile $(APPNAME).klist
-	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
-	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
+
+# 	$(MEGATOOL) -a bin/$(APPNAME).prg 00002000
+# 	$(MEGATOOL) -c -e 00002000 bin/$(APPNAME).prg.addr
 
 map:
 	$(LDTK65) --ncm --workdir "./assets/" --input "bg2.ldtk" --output "sdcard"

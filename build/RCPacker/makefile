@@ -2,7 +2,7 @@ TARGET = rcPacker
 
 LIBS = -lm
 CXX = g++
-CXXFLAGS = -g -Wall -std=c++17 -x c++
+CXXFLAGS = -g -O3 -Wall -std=c++17 -x c++
 
 HEADERS = $(wildcard *.h)
 RC_SOURCES = rcPacker.c cruncher.c file.c decruncher.c validation.c
