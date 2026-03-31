@@ -225,6 +225,9 @@ SaveStateEnd:
 #import "keyb_code.s"
 #import "pixie_code.s"
 
+.segment Code "Decrunch"
+#import "build/RCPacker/decomp.s"
+
 // ------------------------------------------------------------
 //
 .enum {GStateTitles, GStatePlay, GStateCredits}
@@ -276,11 +279,13 @@ Entry:
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	DecrunchFile(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 	
-	_set32im(testDecomp, DePut)
+	// _set32im(testDecomp, DePut)
 
-	ldx #<(testDecomp + iffl1.crunchAddress)
-	ldy #>(testDecomp + iffl1.crunchAddress)
-	jsr Decrunch
+	// ldx #<(testDecomp + iffl1.crunchAddress)
+	// ldy #>(testDecomp + iffl1.crunchAddress)
+	// jsr Decrunch
+
+	Decomp32(testDecomp + iffl1.crunchAddress, testDecomp)
 
 	// done loading. stop drive motor
 	jsr fl_exit
@@ -459,9 +464,6 @@ colLoop:
 #import "gsPlay.s"
 #import "gsCredits.s"
 #import "bgmap.s"
-
-.segment Code "Decrunch"
-#import "build/RCPacker/Decruncher.inc"
 
 .segment Data "GameState Tables"
 GSIniStateTable:
