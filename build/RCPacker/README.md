@@ -17,7 +17,7 @@ The executable is created as `rcPacker` in the same directory.
 ## Usage
 
 ```text
-rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-q] [-v]
+rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p <bytes>] [-q] [-v]
 ```
 
 ## Examples
@@ -46,7 +46,7 @@ This concatenates the three input files in the given order, compresses them as o
 ### Multi-File with Padding
 
 ```bash
-./rcpacker level_data.bin enemy_data.bin audio_data.bin -p -o game_pack.b2
+./rcpacker level_data.bin enemy_data.bin audio_data.bin -p 256 -o game_pack.b2
 ```
 This concatenates and compresses all three files, adding zero padding after each file except the last one so the next file starts on a 256-byte boundary, then writes `game_pack.b2`.
 
@@ -60,7 +60,7 @@ This compresses the three files into `assets.b2` while hiding low-level crunch/d
 ### Validation
 
 ```bash
-./rcpacker asset1.bin asset2.bin -p -v
+./rcpacker asset1.bin asset2.bin -p 256 -v
 ```
 This compresses the two files with 256-byte alignment padding between them, then decrunches and validates the output against the original combined data.
 
@@ -104,6 +104,21 @@ Writes the packed output to `packed_data.b2` instead of using the default filena
 rcpacker tileset.bin
 ```
 Uses the default output naming and writes to `tileset.bin.b2`.
+
+### `-p <bytes>`
+
+Pad each input file except the last one so the next file begins on the requested byte boundary.
+
+Details:
+- `<bytes>` must be a positive integer value (for example, `256`).
+- Padding is inserted after each file, except the last one.
+- Padding bytes are zero-filled.
+
+Example:
+
+```bash
+rcpacker file1.bin file2.bin -p 256
+```
 
 
 ### `-q`

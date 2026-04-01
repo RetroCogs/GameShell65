@@ -15,10 +15,10 @@ int g_rcpackerQuiet = 0;
 static void printUsage()
 {
 	printf("\n");
-	printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-q] [-v]\n");
+	printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p <bytes>] [-q] [-v]\n");
 	printf("  <input_file>     One or more files to pack together in the order given.\n");
 	printf("  -o <output_file> Write the packed output to this filename.\n");
-	printf("  -p               Add zero padding between files so the next file begins on a 256-byte boundary.\n");
+	printf("  -p <bytes>       Add zero padding between files so each next file starts on a <bytes> boundary.\n");
 	printf("  -q               Quiet mode. Hide detailed crunch/decrunch output but keep input lines and the final summary.\n");
 	printf("  -v               Decrunch the result and verify it matches the original input data.\n");
 }
@@ -42,7 +42,29 @@ int main(int argc, char *argv[])
 	{
 		if (strcmp(argv[argi], "-p") == 0)
 		{
-			doPadding = 0x100;
+			char *endPtr;
+			unsigned long paddingValue;
+
+			if ((argi + 1) >= argc)
+			{
+				printf("\n");
+				printf("Error: You used -p but did not provide a padding value.\n");
+				printf("Please add a value after -p, for example: -p 256\n");
+				printUsage();
+				return -1;
+			}
+
+			paddingValue = strtoul(argv[++argi], &endPtr, 0);
+			if (*argv[argi] == '\0' || *endPtr != '\0' || paddingValue == 0 || paddingValue > INT_MAX)
+			{
+				printf("\n");
+				printf("Error: Invalid padding value \"%s\" for -p.\n", argv[argi]);
+				printf("Use a positive integer value, for example: -p 256\n");
+				printUsage();
+				return -1;
+			}
+
+			doPadding = (int)paddingValue;
 		}
 		else if (strcmp(argv[argi], "-o") == 0)
 		{
@@ -159,7 +181,7 @@ int main(int argc, char *argv[])
 
 			if (doPadding > 0)
 			{
-				/* Pad this file's end so the next file starts at a 256-byte boundary. */
+				/* Pad this file's end so the next file starts at the requested boundary. */
 				if ((fileIndex + 1) < inputFiles.size())
 				{
 					padBytes = ((size_t)doPadding - (partFile.buffer.size % (size_t)doPadding)) % (size_t)doPadding;
