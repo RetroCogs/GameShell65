@@ -20,6 +20,50 @@ The executable is created as `rcPacker` in the same directory.
 rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-q] [-v]
 ```
 
+## Examples
+
+### Single File
+
+```bash
+./rcpacker sprite_tileset.bin
+```
+This compresses `sprite_tileset.bin` by itself and writes the default output file `sprite_tileset.bin.b2`.
+
+### Single File with Custom Output
+
+```bash
+./rcpacker sprite_tileset.bin -o sprite_pack.b2
+```
+This compresses `sprite_tileset.bin` by itself and writes the packed output to `sprite_pack.b2`.
+
+### Multi-File with Custom Output
+
+```bash
+./rcpacker bg_tiles.bin sprites.bin palettes.bin -o graphics_data.b2
+```
+This concatenates the three input files in the given order, compresses them as one stream, and writes the result to `graphics_data.b2`.
+
+### Multi-File with Padding
+
+```bash
+./rcpacker level_data.bin enemy_data.bin audio_data.bin -p -o game_pack.b2
+```
+This concatenates and compresses all three files, adding zero padding after each file except the last one so the next file starts on a 256-byte boundary, then writes `game_pack.b2`.
+
+### Quiet Summary Output
+
+```bash
+./rcpacker asset1.bin asset2.bin asset3.bin -q -o assets.b2
+```
+This compresses the three files into `assets.b2` while hiding low-level crunch/decrunch chatter and ending with a concise one-line summary.
+
+### Validation
+
+```bash
+./rcpacker asset1.bin asset2.bin -p -v
+```
+This compresses the two files with 256-byte alignment padding between them, then decrunches and validates the output against the original combined data.
+
 ## Command-Line Options
 
 ### Input Files
@@ -152,50 +196,6 @@ summary files=$00000002 source=$00005679 pad=$000000CC packed=$00003ABC ratio=52
 - `packed`: Final compressed `.b2` size.
 - `ratio`: Packed size as a percentage of the padded combined source size.
 - `output`: Output filename written by rcPacker.
-
-## Examples
-
-### Single File
-
-```bash
-./rcpacker sprite_tileset.bin
-```
-This compresses `sprite_tileset.bin` by itself and writes the default output file `sprite_tileset.bin.b2`.
-
-### Single File with Custom Output
-
-```bash
-./rcpacker sprite_tileset.bin -o sprite_pack.b2
-```
-This compresses `sprite_tileset.bin` by itself and writes the packed output to `sprite_pack.b2`.
-
-### Multi-File with Custom Output
-
-```bash
-./rcpacker bg_tiles.bin sprites.bin palettes.bin -o graphics_data.b2
-```
-This concatenates the three input files in the given order, compresses them as one stream, and writes the result to `graphics_data.b2`.
-
-### Multi-File with Padding
-
-```bash
-./rcpacker level_data.bin enemy_data.bin audio_data.bin -p -o game_pack.b2
-```
-This concatenates and compresses all three files, adding zero padding after each file except the last one so the next file starts on a 256-byte boundary, then writes `game_pack.b2`.
-
-### Quiet Summary Output
-
-```bash
-./rcpacker asset1.bin asset2.bin asset3.bin -q -o assets.b2
-```
-This compresses the three files into `assets.b2` while hiding low-level crunch/decrunch chatter and ending with a concise one-line summary.
-
-### Validation
-
-```bash
-./rcpacker asset1.bin asset2.bin -p -v
-```
-This compresses the two files with 256-byte alignment padding between them, then decrunches and validates the output against the original combined data.
 
 ## Technical Details
 
