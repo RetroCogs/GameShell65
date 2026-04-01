@@ -13,9 +13,9 @@
 .const COLOR_OFFSET 		= $0800				// Offset ColorRam to make bank $10000 contiguous
 .const COLOR_RAM 			= $ff80000 + COLOR_OFFSET
 
-.const TEMP_RAM 			= $10000			// all bg chars / pixie data goes here
+.const TEMP_RAM 			= $20000			// all bg chars / pixie data goes here
 
-.const GRAPHICS_RAM 		= $28000			// all bg chars / pixie data goes here
+.const GRAPHICS_RAM 		= $10000			// all bg chars / pixie data goes here
 .const PIXIEANDSCREEN_RAM 	= $50000			// screen ram / pixie work ram goes here
 												// must be on a $100 alignment due to RRB pixie MAP behavior
 
@@ -269,12 +269,12 @@ Entry:
 	// initialise fast load (start drive motor)
 	jsr fl_init
 
-	LoadFile(TEMP_RAM, iffl0.filenamePtr)
+	// LoadFile(TEMP_RAM, iffl0.filenamePtr)
 
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	
 	// Verify loaded data matches between TEMP_RAM and bg0Chars.addr + iffl0.crunchAddress
-	jsr VerifyLoadedData
+	// jsr VerifyLoadedData
 	
 	Decomp32(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 
