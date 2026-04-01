@@ -13,8 +13,6 @@
 .const COLOR_OFFSET 		= $0800				// Offset ColorRam to make bank $10000 contiguous
 .const COLOR_RAM 			= $ff80000 + COLOR_OFFSET
 
-.const TEMP_RAM 			= $20000			// all bg chars / pixie data goes here
-
 .const GRAPHICS_RAM 		= $10000			// all bg chars / pixie data goes here
 .const PIXIEANDSCREEN_RAM 	= $50000			// screen ram / pixie work ram goes here
 												// must be on a $100 alignment due to RRB pixie MAP behavior
@@ -269,13 +267,7 @@ Entry:
 	// initialise fast load (start drive motor)
 	jsr fl_init
 
-	// LoadFile(TEMP_RAM, iffl0.filenamePtr)
-
 	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
-	
-	// Verify loaded data matches between TEMP_RAM and bg0Chars.addr + iffl0.crunchAddress
-	// jsr VerifyLoadedData
-	
 	Decomp32(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 
 	// done loading. stop drive motor
@@ -384,86 +376,6 @@ SwitchGameStates:
 	tax
 	jsr (GSIniStateTable,x)
 	rts
-}
-
-// ------------------------------------------------------------
-// VerifyLoadedData: Compare 14397 bytes between TEMP_RAM and bg0Chars.addr + iffl0.crunchAddress
-// Used to verify that both loaded copies match before decompression
-// Clobbers: A, X, Y, Z
-// --------------------------------------------------
-VerifyLoadedData:
-{
-	.const BYTES_TO_CHECK = 14397
-	.const BYTES_TO_CHECK_LO = BYTES_TO_CHECK & $ff
-	.const BYTES_TO_CHECK_HI = (BYTES_TO_CHECK >> 8) & $ff
-	
-	// Set up pointers to the two regions to compare
-	// Pointer 1: decomp_get = TEMP_RAM ($10000)
-	lda #<TEMP_RAM
-	sta decomp_get + 0
-	lda #>TEMP_RAM
-	sta decomp_get + 1
-	lda #[TEMP_RAM >> 16]
-	sta decomp_get + 2
-	lda #[TEMP_RAM >> 24]
-	sta decomp_get + 3
-	
-	// Pointer 2: decomp_put = bg0Chars.addr + iffl0.crunchAddress
-	// Since these are computed at assemble time, we'll set them directly
-	lda #<(bg0Chars.addr + iffl0.crunchAddress)
-	sta decomp_put + 0
-	lda #>(bg0Chars.addr + iffl0.crunchAddress)
-	sta decomp_put + 1
-	lda #[(bg0Chars.addr + iffl0.crunchAddress) >> 16]
-	sta decomp_put + 2
-	lda #[(bg0Chars.addr + iffl0.crunchAddress) >> 24]
-	sta decomp_put + 3
-	
-	// Initialize byte counter in decomp_len (high byte) and decomp_lenfield (low byte)
-	lda #BYTES_TO_CHECK_HI
-	sta decomp_len
-	lda #BYTES_TO_CHECK_LO
-	sta decomp_lenfield
-	
-	ldz #$00  // Z must be 0 for indirect addressing
-	
-VerifyLoop:
-	// Load byte from TEMP_RAM
-	lda ((decomp_get)),z
-	
-	// Compare with byte from bg0Chars address
-	cmp ((decomp_put)),z
-	bne VerifyFail  // Branch if mismatch
-	
-	// Increment both pointers
-	_inc32(decomp_get)
-	_inc32(decomp_put)
-	
-	// Decrement counter
-	clc
-	lda decomp_lenfield
-	bne !+  // If low byte is not zero, just decrement it
-	
-	// Low byte is zero, so decrement high byte and reload low byte to $ff
-	dec decomp_len
-	lda #$ff
-	sta decomp_lenfield
-	cmp #$ff  // Set Z flag if we've counted down to zero
-	beq VerifySuccess
-	jmp VerifyLoop
-	
-!:	dec decomp_lenfield
-	jmp VerifyLoop
-	
-VerifySuccess:
-	// All bytes matched - flash border green then restore	
-	lda #$00
-	sta $d020
-	rts
-	
-VerifyFail:
-	// Mismatch detected - flash border
-	infLoop()
 }
 
 // ------------------------------------------------------------
