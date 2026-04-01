@@ -20,6 +20,8 @@ typedef unsigned int uint;
 typedef enum { false = 0, true = 1 } bool;
 #endif
 
+extern int g_rcpackerQuiet;
+
 #define memSize 65536
 
 #endif // _bb_h_

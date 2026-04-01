@@ -788,17 +788,20 @@ bool crunch(const File *aSource, Buffer *outBuffer)
 		packedPct = (100.0 * (double)packLen) / (double)ibufSize;
 	}
 
-	printf("[Crunch] Input file size:   0x%08X bytes\n",
-		(unsigned int)aSource->buffer.size);
-	if (headerSize > 0)
+	if (!g_rcpackerQuiet)
 	{
-		printf("[Crunch] Input payload:     0x%08X bytes (file - 0x%08X-byte "
-					 "header)\n",
-			ibufSize, headerSize);
+		printf("[Crunch] Input file size:   0x%08X bytes\n",
+			(unsigned int)aSource->buffer.size);
+		if (headerSize > 0)
+		{
+			printf("[Crunch] Input payload:     0x%08X bytes (file - 0x%08X-byte "
+						 "header)\n",
+				ibufSize, headerSize);
+		}
+		printf("[Crunch] Packed stream:     0x%08X bytes (%.2f%% of input)\n",
+			packLen, packedPct);
+		printf("[Crunch] Margin:            %d bytes\n", margin);
 	}
-	printf("[Crunch] Packed stream:     0x%08X bytes (%.2f%% of input)\n",
-		packLen, packedPct);
-	printf("[Crunch] Margin:            %d bytes\n", margin);
 
 	uint loadAddr = 0;
 
@@ -807,11 +810,14 @@ bool crunch(const File *aSource, Buffer *outBuffer)
 	// to address 0 never overwrites unread input
 	loadAddr = ibufSize - packLen + (uint)margin;
 	fileLen += 8; // header
-	printf("[Crunch] Mode:              data (raw binary)\n");
-	printf("[Crunch] Load address:      0x%08X\n", loadAddr);
-	printf("[Crunch] Original size:     0x%08X bytes\n", ibufSize);
+	if (!g_rcpackerQuiet)
+	{
+		printf("[Crunch] Mode:              data (raw binary)\n");
+		printf("[Crunch] Load address:      0x%08X\n", loadAddr);
+		printf("[Crunch] Original size:     0x%08X bytes\n", ibufSize);
 
-	printf("[Crunch] Output size:       0x%08X bytes (full .b2)\n", fileLen);
+		printf("[Crunch] Output size:       0x%08X bytes (full .b2)\n", fileLen);
+	}
 
 	outBuffer->size = fileLen;
 	outBuffer->data = (byte *)malloc(outBuffer->size);

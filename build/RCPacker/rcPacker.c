@@ -10,13 +10,16 @@
 #include "decruncher.h"
 #include "validation.h"
 
+int g_rcpackerQuiet = 0;
+
 static void printUsage()
 {
 	printf("\n");
-	printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+	printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-q] [-v]\n");
 	printf("  <input_file>     One or more files to pack together in the order given.\n");
 	printf("  -o <output_file> Write the packed output to this filename.\n");
 	printf("  -p               Add zero padding between files so the next file begins on a 256-byte boundary.\n");
+	printf("  -q               Quiet mode. Hide detailed crunch/decrunch output but keep input lines and the final summary.\n");
 	printf("  -v               Decrunch the result and verify it matches the original input data.\n");
 }
 
@@ -30,7 +33,7 @@ int main(int argc, char *argv[])
 
 	if (argc == 1)
 	{
-		printf("RCPacker packs one or more input files into a single ByteBoozer stream.\n");
+		printf("RCPacker - ByteBoozer2.0 cruncher.\n\n");
 		printUsage();
 		return 0;
 	}
@@ -57,6 +60,10 @@ int main(int argc, char *argv[])
 		{
 			doValidate = 1;
 		}
+		else if (strcmp(argv[argi], "-q") == 0)
+		{
+			g_rcpackerQuiet = 1;
+		}
 		else if (argv[argi][0] == '-')
 		{
 			printf("\n");
@@ -73,6 +80,7 @@ int main(int argc, char *argv[])
 
 	if (inputFiles.empty())
 	{
+		printf("RCPacker - ByteBoozer2.0 cruncher.\n");
 		printf("\n");
 		printf("Error: You did not give rcPacker any input files to pack.\n");
 		printf("Please provide at least one input file on the command line.\n");
@@ -84,6 +92,7 @@ int main(int argc, char *argv[])
 		File sourceFile;
 		Buffer myBBBuffer;
 		int exitCode = 0;
+		double packedRatio = 0.0;
 		size_t totalInputBytes = 0;
 		size_t totalPaddingBytes = 0;
 		size_t outNameLen;
@@ -95,6 +104,11 @@ int main(int argc, char *argv[])
 		sourceFile.buffer.size = 0;
 		myBBBuffer.data = NULL;
 		myBBBuffer.size = 0;
+
+		if (!g_rcpackerQuiet)
+		{
+			printf("RCPacker - ByteBoozer2.0 cruncher.\n\n");
+		}
 
 		if (outputNameArg != NULL)
 		{
@@ -188,11 +202,21 @@ int main(int argc, char *argv[])
 			freeFile(&partFile);
 		}
 
+		if (!g_rcpackerQuiet)
+		{
+			printf("\n");
+		}
+
 		if (!crunch(&sourceFile, &myBBBuffer))
 		{
 			free(sourceFile.buffer.data);
 			free(outName);
 			return -1;
+		}
+
+		if (!g_rcpackerQuiet)
+		{
+			printf("\n");
 		}
 
 		if (!writeFile(&myBBBuffer, outName))
@@ -206,17 +230,24 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-		printf("ByteBoozer summary:\n");
-		printf("  files         : $%08X\n", (unsigned int)inputFiles.size());
-		printf("  source bytes  : $%08X\n", (unsigned int)totalInputBytes);
-		printf("  padding bytes : $%08X\n", (unsigned int)totalPaddingBytes);
-		printf("  packed bytes  : $%08X\n", (unsigned int)myBBBuffer.size);
 		if (sourceFile.buffer.size > 0)
 		{
-			double ratio = (double)myBBBuffer.size * 100.0 / (double)sourceFile.buffer.size;
-			printf("  packed ratio: %.2f%%\n", ratio);
+			packedRatio = (double)myBBBuffer.size * 100.0 / (double)sourceFile.buffer.size;
 		}
-		printf("  output: \"%s\"\n", outName);
+
+		if (!g_rcpackerQuiet)
+		{
+			printf("ByteBoozer summary:\n");
+			printf("  files         : $%08X\n", (unsigned int)inputFiles.size());
+			printf("  source bytes  : $%08X\n", (unsigned int)totalInputBytes);
+			printf("  padding bytes : $%08X\n", (unsigned int)totalPaddingBytes);
+			printf("  packed bytes  : $%08X\n", (unsigned int)myBBBuffer.size);
+			if (sourceFile.buffer.size > 0)
+			{
+				printf("  packed ratio  : %.2f%%\n", packedRatio);
+			}
+			printf("  output        : \"%s\"\n", outName);
+		}
 
 		if (doValidate)
 		{
@@ -232,6 +263,20 @@ int main(int argc, char *argv[])
 			}
 
 			free(b3Buffer.data);
+		}
+
+		if (g_rcpackerQuiet)
+		{
+			printf("summary files=$%08X source=$%08X pad=$%08X packed=$%08X",
+				(unsigned int)inputFiles.size(),
+				(unsigned int)totalInputBytes,
+				(unsigned int)totalPaddingBytes,
+				(unsigned int)myBBBuffer.size);
+			if (sourceFile.buffer.size > 0)
+			{
+				printf(" ratio=%.2f%%", packedRatio);
+			}
+			printf(" output=\"%s\"\n", outName);
 		}
 
 		free(sourceFile.buffer.data);

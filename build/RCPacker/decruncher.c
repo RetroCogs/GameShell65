@@ -308,10 +308,13 @@ int decrunchToMemory(const Buffer *packedBuffer, Buffer *outBuffer)
 		((uint32_t)packedBuffer->data[6] << 16) |
 		((uint32_t)packedBuffer->data[7] << 24);
 
-	printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedBuffer->size);
-	printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
-	printf("[Decrunch] Original size:   0x%08X bytes\n", origSize);
-	printf("[Decrunch] Stream size:     0x%08X bytes\n", (unsigned int)(packedBuffer->size - 8));
+	if (!g_rcpackerQuiet)
+	{
+		printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedBuffer->size);
+		printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
+		printf("[Decrunch] Original size:   0x%08X bytes\n", origSize);
+		printf("[Decrunch] Stream size:     0x%08X bytes\n", (unsigned int)(packedBuffer->size - 8));
+	}
 
 	if (!decrunchPayload(packedBuffer->data + 8, packedBuffer->size - 8, &payload, &payloadSize))
 	{
@@ -322,9 +325,12 @@ int decrunchToMemory(const Buffer *packedBuffer, Buffer *outBuffer)
 	outBuffer->data = payload;
 	outBuffer->size = payloadSize;
 
-	printf("[Decrunch] Output payload:  0x%08X bytes\n", (unsigned int)payloadSize);
-	printf("[Decrunch] Output size: 0x%08X bytes\n", (unsigned int)payloadSize);
-	printf("[Decrunch] Validation path: in-memory\n");
+	if (!g_rcpackerQuiet)
+	{
+		printf("[Decrunch] Output payload:  0x%08X bytes\n", (unsigned int)payloadSize);
+		printf("[Decrunch] Output size: 0x%08X bytes\n", (unsigned int)payloadSize);
+		printf("[Decrunch] Validation path: in-memory\n");
+	}
 
 	return 0;
 }
