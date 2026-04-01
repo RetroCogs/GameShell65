@@ -172,6 +172,7 @@ DLoop:
 	bcs Match
 
 Literal:
+	// Literal run: get length.
 	GetLen()
 	sta decomp_lenfield
 	sta decomp_len
@@ -186,11 +187,14 @@ LLoop:
 	lda decomp_lenfield
 	cmp #$ff
 	beq DLoop
-	jmp Match
+
+	// Has to continue with a match..
 
 Match:
+	// Match: get length.
 	GetLen()
 	sta decomp_lenfield
+	// Length $FF -> EOF.
 	cmp #$ff
 	lbeq DecompEnd
 
@@ -211,6 +215,7 @@ Match:
 	lda DecompOffsetTab,y
 	beq M8
 
+	// Get bits < 8.
 M_1:
 	GetNextBit()
 	rol
