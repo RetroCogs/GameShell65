@@ -107,11 +107,20 @@ Validation OK: round-trip data matches original input.
 
 ### Normal Mode
 
-Normal mode prints one line per input file plus a final multi-line summary:
+Normal mode prints input lines, `[Crunch]` diagnostics, and a final multi-line summary:
 
 ```text
 input[01]  start=$00000000  size=$00001234  pad=$00000000  "file1.bin"
 input[02]  start=$00001234  size=$00004567  pad=$000000CC  "file2.bin"
+
+[Crunch] Input file size:   0x00005745 bytes
+[Crunch] Packed stream:     0x00003AB4 bytes (65.13% of input)
+[Crunch] Margin:            24 bytes
+[Crunch] Mode:              data (raw binary)
+[Crunch] Load address:      0x00001CA1
+[Crunch] Original size:     0x00005745 bytes
+[Crunch] Output size:       0x00003ABC bytes (full .b2)
+
 ByteBoozer summary:
   files         : $00000002
   source bytes  : $00005679
@@ -151,30 +160,42 @@ summary files=$00000002 source=$00005679 pad=$000000CC packed=$00003ABC ratio=52
 ```bash
 ./rcpacker sprite_tileset.bin
 ```
+This compresses `sprite_tileset.bin` by itself and writes the default output file `sprite_tileset.bin.b2`.
+
+### Single File with Custom Output
+
+```bash
+./rcpacker sprite_tileset.bin -o sprite_pack.b2
+```
+This compresses `sprite_tileset.bin` by itself and writes the packed output to `sprite_pack.b2`.
 
 ### Multi-File with Custom Output
 
 ```bash
 ./rcpacker bg_tiles.bin sprites.bin palettes.bin -o graphics_data.b2
 ```
+This concatenates the three input files in the given order, compresses them as one stream, and writes the result to `graphics_data.b2`.
 
 ### Multi-File with Padding
 
 ```bash
 ./rcpacker level_data.bin enemy_data.bin audio_data.bin -p -o game_pack.b2
 ```
+This concatenates and compresses all three files, adding zero padding after each file except the last one so the next file starts on a 256-byte boundary, then writes `game_pack.b2`.
 
 ### Quiet Summary Output
 
 ```bash
 ./rcpacker asset1.bin asset2.bin asset3.bin -q -o assets.b2
 ```
+This compresses the three files into `assets.b2` while hiding low-level crunch/decrunch chatter and ending with a concise one-line summary.
 
 ### Validation
 
 ```bash
 ./rcpacker asset1.bin asset2.bin -p -v
 ```
+This compresses the two files with 256-byte alignment padding between them, then decrunches and validates the output against the original combined data.
 
 ## Technical Details
 
@@ -185,33 +206,6 @@ Original sources and references:
 ### Memory and Performance
 
 - Input files are read and concatenated in memory.
-- Compression is performed on the combined buffer.
-- The build uses `-O3` optimization.
-
-### Exit Codes
-
-- `0`: Success.
-- Non-zero: Error during reading, compression, validation, or output writing.
-
-## License
-
-Part of the GameShell65 project.
-
-### Quiet Summary Output
-
-```bash
-./rcpacker asset1.bin asset2.bin asset3.bin -q -o assets.b2
-```
-
-### Validation
-
-Original sources and references:
-- https://csdb.dk/release/?id=145031
-- https://github.com/luigidifraia/ByteBoozer2
-
-### Memory and Performance
-
-- Input files are read and concatenated in memory before compression.
 - Compression is performed on the combined buffer.
 - The build uses `-O3` optimization.
 
