@@ -51,35 +51,13 @@ Details:
 
 Examples:
 
-```bash
-rcpacker file1.bin file2.bin -o packed_data.b2
-```
 
-```bash
-rcpacker tileset.bin
-```
-
-### `-p`
-Pad each input file except the last one so the next file begins on a 256-byte boundary.
-
-Default behavior:
-- Without `-p`, files are concatenated directly with no padding.
-
-Details:
-- Padding is added after each file, not before the next one.
-
-Example:
-
-```bash
-rcpacker file1.bin file2.bin -p
-```
-
-If `file1.bin` is 300 bytes long:
-- `file1.bin` starts at `0x00000000`
-- 212 bytes of zero padding are added after it
-- `file2.bin` starts at `0x00000200`
 ### `-q`
+
 Quiet mode.
+
+Behavior:
+- Keeps per-file `input[...]` lines visible.
 - Hides lower-level `[Crunch]`, `[Decrunch]`, and successful `[Validate]` informational output.
 - Replaces the normal multi-line final summary with a single concise `summary ...` line.
 - Does not suppress error messages.
@@ -91,12 +69,18 @@ rcpacker file1.bin file2.bin file3.bin -q
 ```
 
 ### `-v`
+
 Decrunch and validate the packed output after compression.
 
 Behavior:
 - Decompresses the generated `.b2` output in memory.
+- Compares decrunched bytes against the original combined source buffer.
 - Includes any zero padding added by `-p` in the comparison.
 - Returns a non-zero exit code if validation fails.
+
+Examples:
+
+```bash
 rcpacker file1.bin file2.bin -v
 ```
 
@@ -105,11 +89,18 @@ rcpacker file1.bin file2.bin -p -v
 ```
 
 ## Console Output
+
+### Normal Mode
+
 Normal mode prints one line per input file plus a final multi-line summary:
 
 ```text
 input[01]  start=$00000000  size=$00001234  pad=$00000000  "file1.bin"
 input[02]  start=$00001234  size=$00004567  pad=$000000CC  "file2.bin"
+ByteBoozer summary:
+  files         : $00000002
+  source bytes  : $00005679
+  padding bytes : $000000CC
   packed bytes  : $00003ABC
   packed ratio  : 52.44%
   output        : "mydata.b2"
@@ -121,6 +112,10 @@ Quiet mode keeps the `input[...]` lines but reduces the final summary to a singl
 
 ```text
 input[01]  start=$00000000  size=$00001234  pad=$00000000  "file1.bin"
+input[02]  start=$00001234  size=$00004567  pad=$000000CC  "file2.bin"
+summary files=$00000002 source=$00005679 pad=$000000CC packed=$00003ABC ratio=52.44% output="mydata.b2"
+```
+
 ### Field Meanings
 
 - `input[##]`: 1-based input file number.
@@ -153,6 +148,39 @@ input[01]  start=$00000000  size=$00001234  pad=$00000000  "file1.bin"
 ```bash
 ./rcpacker level_data.bin enemy_data.bin audio_data.bin -p -o game_pack.b2
 ```
+
+### Quiet Summary Output
+
+```bash
+./rcpacker asset1.bin asset2.bin asset3.bin -q -o assets.b2
+```
+
+### Validation
+
+```bash
+./rcpacker asset1.bin asset2.bin -p -v
+```
+
+## Technical Details
+
+Original sources and references:
+- https://csdb.dk/release/?id=145031
+- https://github.com/luigidifraia/ByteBoozer2
+
+### Memory and Performance
+
+- Input files are read and concatenated in memory.
+- Compression is performed on the combined buffer.
+- The build uses `-O3` optimization.
+
+### Exit Codes
+
+- `0`: Success.
+- Non-zero: Error during reading, compression, validation, or output writing.
+
+## License
+
+Part of the GameShell65 project.
 
 ### Quiet Summary Output
 
