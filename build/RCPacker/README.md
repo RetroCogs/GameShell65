@@ -22,7 +22,7 @@ rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-q] [-v]
 
 ## Command-Line Options
 
-### Positional Arguments
+### Input Files
 
 #### `<input_file> [input_file2 ...]`
 **Description:**  
