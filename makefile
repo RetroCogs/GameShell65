@@ -34,7 +34,7 @@ disk:
 	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin "fs-iffl0"
 
 datablobs: data
-	build/RCPacker/rcpacker -p -v \
+	build/RCPacker/rcpacker -p 256 -v \
 		sdcard/bg20_chr.bin \
 		sdcard/bg21_chr.bin \
 		sdcard/bg22_chr.bin \
