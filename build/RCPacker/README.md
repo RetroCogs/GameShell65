@@ -51,6 +51,16 @@ Details:
 
 Examples:
 
+```bash
+rcpacker file1.bin file2.bin -o packed_data.b2
+```
+Writes the packed output to `packed_data.b2` instead of using the default filename.
+
+```bash
+rcpacker tileset.bin
+```
+Uses the default output naming and writes to `tileset.bin.b2`.
+
 
 ### `-q`
 
@@ -78,14 +88,19 @@ Behavior:
 - Includes any zero padding added by `-p` in the comparison.
 - Returns a non-zero exit code if validation fails.
 
-Examples:
-
-```bash
-rcpacker file1.bin file2.bin -v
-```
+Example:
 
 ```bash
 rcpacker file1.bin file2.bin -p -v
+```
+
+Validation output looks like this on success:
+
+```text
+[Validate] Original size:   0x00005679 bytes
+[Validate] Round-trip size: 0x00005679 bytes
+Validation OK: round-trip data matches original input.
+[Validate] Compared bytes:  0x00005679
 ```
 
 ## Console Output
