@@ -173,6 +173,10 @@ Packs with padding and validates that decompression recovers all original bytes 
 ### ByteBoozer V2 Format
 rcPacker uses the ByteBoozer V2 compression algorithm, which is optimized for 6502/65C02 decompression on the MEGA65.
 
+Original sources and references:
+- https://csdb.dk/release/?id=145031
+- https://github.com/luigidifraia/ByteBoozer2
+
 ### Memory and Performance
 - Input files are read and concatenated in memory before compression.
 - Compression is performed on the combined buffer.
