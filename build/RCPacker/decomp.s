@@ -44,15 +44,23 @@
 //   original routine.
 // - GetNewBits must preserve A, because GetLen depends on A holding the
 //   in-progress decoded length.
+// - GetNewBits inlines GetNextByte to avoid the jsr/rts overhead (saves ~12
+//   cycles per refill, i.e. roughly 1.5 cycles per bit on average).
 //
 // 32-bit adaptation details:
 // - decomp_get is the 32-bit packed source pointer.
 // - decomp_put is the 32-bit output pointer.
 // - decomp_msrc is the 32-bit source pointer used for match copies.
-// - All memory accesses are done through ((ptr)),z with Z normally set to 0.
+// - All memory accesses are done through ((ptr)),z. Z is set to 0 once at
+//   Decomp entry and is never modified by any instruction in the main loop,
+//   so ldz #$00 before each access is unnecessary and is omitted.
 // - Pointer advancement is done explicitly with decomp_inc32.
 // - Match offsets are decoded as signed 16-bit deltas and then sign-extended
 //   into a full 32-bit address calculation against decomp_put.
+// - The sign-extension byte is held in X rather than a ZP variable
+//   (decomp_offsign eliminated), saving 5 cycles per match.
+// - LLoop and MLoop use Y as the iteration counter (dey vs dec zp saves
+//   3 cycles per byte copied in both loops).
 //
 // Header handling:
 // - Decomp32 expects a full .b2 stream and skips the initial 8-byte header
@@ -88,7 +96,7 @@
 .const decomp_len          = decomp_base + 14  // 1 byte loop counter
 .const decomp_lenfield     = decomp_base + 15  // 1 byte raw decoded length field
 .const decomp_offhi        = decomp_base + 16  // 1 byte signed high offset byte
-.const decomp_offsign      = decomp_base + 17  // 1 byte sign-extension helper
+// decomp_offsign removed: sign extension byte is kept in X instead
 
 .macro GetNextBit()
 {
@@ -112,6 +120,7 @@ _end:
 
 .macro Decomp32(srcAddr, dstAddr)
 {
+	ldz #$00               // Z=0 for all 32-bit operations
 	_set32im(srcAddr, decomp_get)
 	_set32im(dstAddr, decomp_put)
 	jsr DecompSkipHeader
@@ -120,6 +129,7 @@ _end:
 
 .macro DecompRaw32(srcAddr, dstAddr)
 {
+	ldz #$00               // Z=0 for all 32-bit operations
 	_set32im(srcAddr, decomp_get)
 	_set32im(dstAddr, decomp_put)
 	jsr Decomp
@@ -137,16 +147,19 @@ DecompOffsetTab:
 	.byte %11110000		// long: 13
 
 // Read next packed byte from 32-bit source pointer and advance it.
+// Z must be 0 on entry (guaranteed by Decomp entry point; nothing in the main loop changes Z).
 GetNextByte:
-	ldz #$00
 	lda ((decomp_get)),z
 	_inc32(decomp_get)
 	rts
 
 // Refill bit reservoir from packed stream.
+// Inlines GetNextByte to avoid jsr/rts overhead (saves 12 cycles per refill).
+// Preserves A: GetLen depends on A holding the in-progress decoded length.
 GetNewBits:
 	pha
-	jsr GetNextByte
+	lda ((decomp_get)),z    // Z=0 (set at Decomp entry, never modified)
+	_inc32(decomp_get)
 	rol
 	sta decomp_bits
 	pla
@@ -154,6 +167,7 @@ GetNewBits:
 
 // Skip the 8-byte .b2 header (load address + original size).
 DecompSkipHeader:
+	ldz #$00               // Z must be 0 for ((decomp_get)),z accesses in GetNextByte
 	ldx #$08
 !:
 	jsr GetNextByte
@@ -164,9 +178,10 @@ DecompSkipHeader:
 // Main decrunch routine. Expects decomp_get to point at payload and decomp_put to
 // point at caller-selected destination address.
 Decomp:
+	ldz #$00               // Z must be 0 for all ((ptr)),z accesses; never modified in main loop
 	lda #$80
 	sta decomp_bits
-	
+
 DLoop:
 	GetNextBit()
 	bcs Match
@@ -174,15 +189,14 @@ DLoop:
 Literal:
 	// Literal run: get length.
 	GetLen()
-	sta decomp_lenfield
-	sta decomp_len
+	sta decomp_lenfield    // saved for $ff check after loop
+	tay                    // Y = loop count (dey saves 3 cycles/iter vs dec zp)
 
 LLoop:
 	jsr GetNextByte
-	ldz #$00
-	sta ((decomp_put)),z
+	sta ((decomp_put)),z   // Z=0
 	_inc32(decomp_put)
-	dec decomp_len
+	dey
 	bne LLoop
 	lda decomp_lenfield
 	cmp #$ff
@@ -231,10 +245,10 @@ M8:
 
 MShort:
 	// Short form: signed high byte is always $FF, low byte remains in A.
-	sta decomp_lenfield
+	tax                    // save low offset byte in X (avoids ZP store/reload, saves 2 cycles)
 	lda #$ff
 	sta decomp_offhi
-	lda decomp_lenfield
+	txa                    // restore low offset byte
 
 MDone:
 	// msrc = put + signed 16-bit offset in (A=lo, decomp_offhi=hi).
@@ -245,28 +259,29 @@ MDone:
 	adc decomp_put + 1
 	sta decomp_msrc + 1
 
+	// Sign-extend decomp_offhi into bytes 2 and 3 of decomp_msrc.
+	// X holds the sign byte (0x00 or 0xFF); avoids ZP store/reload, saves 5 cycles.
 	lda decomp_offhi
-	bmi MSignNegative
-	lda #$00
+	bmi MSignNeg
+	ldx #$00
 	bra MSignReady
-MSignNegative:
-	lda #$ff
+MSignNeg:
+	ldx #$ff
 MSignReady:
-	sta decomp_offsign
-	lda decomp_offsign
+	txa                    // carry from byte 1 add still valid
 	adc decomp_put + 2
 	sta decomp_msrc + 2
-	lda decomp_offsign
+	txa
 	adc decomp_put + 3
 	sta decomp_msrc + 3
 
+	ldy decomp_len         // Y = loop count for dey (saves 3 cycles/iter vs dec zp)
 MLoop:
-	ldz #$00
-	lda ((decomp_msrc)),z
+	lda ((decomp_msrc)),z  // Z=0
 	sta ((decomp_put)),z
 	_inc32(decomp_msrc)
 	_inc32(decomp_put)
-	dec decomp_len
+	dey
 	bne MLoop
 	jmp DLoop
 

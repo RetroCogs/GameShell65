@@ -505,11 +505,11 @@ fl_dma_read_bytes:
 	sta $d705
 
 	clc
-	lda fastload_address+0			// Update load address
-	adc fl_bytes_to_copy
+	lda fastload_address+0			// Update load address with proper 16-bit size addition
+	adc fl_bytes_to_copy+0
 	sta fastload_address+0
 	lda fastload_address+1
-	adc #0
+	adc fl_bytes_to_copy+1			// Add high byte of size with carry
 	sta fastload_address+1
 	lda fastload_address+2
 	adc #0
