@@ -10,6 +10,16 @@
 #include "decruncher.h"
 #include "validation.h"
 
+static void printUsage()
+{
+	printf("\n");
+	printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+	printf("  <input_file>     One or more files to pack together in the order given.\n");
+	printf("  -o <output_file> Write the packed output to this filename.\n");
+	printf("  -p               Add zero padding between files so the next file begins on a 256-byte boundary.\n");
+	printf("  -v               Decrunch the result and verify it matches the original input data.\n");
+}
+
 int main(int argc, char *argv[])
 {
 	int doValidate = 0;
@@ -20,11 +30,8 @@ int main(int argc, char *argv[])
 
 	if (argc == 1)
 	{
-		printf("RCPacker [packer for Mega65] usage:\n");
-		printf("\trcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
-		printf("\t-o  output file name (default: first input + .b2)\n");
-		printf("\t-p  round each file start to 256 bytes\n");
-		printf("\t-v  decrunch and validate after packing\n");
+		printf("RCPacker packs one or more input files into a single ByteBoozer stream.\n");
+		printUsage();
 		return 0;
 	}
 
@@ -38,8 +45,10 @@ int main(int argc, char *argv[])
 		{
 			if ((argi + 1) >= argc)
 			{
-				printf("Error: Missing filename after -o.\n");
-				printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+				printf("\n");
+				printf("Error: You used -o but did not give rcPacker an output filename after it.\n");
+				printf("Please add a filename after -o, for example: rcpacker data.bin -o data.b2\n");
+				printUsage();
 				return -1;
 			}
 			outputNameArg = argv[++argi];
@@ -50,8 +59,10 @@ int main(int argc, char *argv[])
 		}
 		else if (argv[argi][0] == '-')
 		{
-			printf("Error: Unknown argument \"%s\".\n", argv[argi]);
-			printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+			printf("\n");
+			printf("Error: rcPacker does not understand the option \"%s\".\n", argv[argi]);
+			printf("Check the spelling of the option, or remove it if you did not mean to use it.\n");
+			printUsage();
 			return -1;
 		}
 		else
@@ -62,8 +73,10 @@ int main(int argc, char *argv[])
 
 	if (inputFiles.empty())
 	{
-		printf("Error: Missing input file.\n");
-		printf("Usage: rcpacker <input_file> [input_file2 ...] [-o <output_file>] [-p] [-v]\n");
+		printf("\n");
+		printf("Error: You did not give rcPacker any input files to pack.\n");
+		printf("Please provide at least one input file on the command line.\n");
+		printUsage();
 		return -1;
 	}
 
@@ -96,7 +109,9 @@ int main(int argc, char *argv[])
 
 		if (outName == NULL)
 		{
-			printf("Error: Out of memory while building output file name.\n");
+			printf("\n");
+			printf("Error: rcPacker ran out of memory while preparing the output filename.\n");
+			printf("Try again with fewer inputs or free some system memory and retry.\n");
 			return -1;
 		}
 
@@ -120,7 +135,9 @@ int main(int argc, char *argv[])
 
 			if (!readFile(&partFile, inputFiles[fileIndex].c_str()))
 			{
-				printf("Error (B-1): Open file \"%s\", aborting.\n", inputFiles[fileIndex].c_str());
+				printf("\n");
+				printf("Error: rcPacker could not open input file \"%s\".\n", inputFiles[fileIndex].c_str());
+				printf("Make sure the file exists, the path is correct, and you have permission to read it.\n");
 				free(sourceFile.buffer.data);
 				free(outName);
 				return -1;
@@ -146,7 +163,9 @@ int main(int argc, char *argv[])
 			newData = (byte *)realloc(sourceFile.buffer.data, newSize);
 			if (newData == NULL)
 			{
-				printf("Error: Out of memory while concatenating input files.\n");
+				printf("\n");
+				printf("Error: rcPacker ran out of memory while combining the input files.\n");
+				printf("This usually means the total input data is larger than the available memory for packing.\n");
 				freeFile(&partFile);
 				free(sourceFile.buffer.data);
 				free(outName);
@@ -178,7 +197,9 @@ int main(int argc, char *argv[])
 
 		if (!writeFile(&myBBBuffer, outName))
 		{
-			printf("Error (B-2): Write file \"%s\", aborting.\n", outName);
+			printf("\n");
+			printf("Error: rcPacker could not write the output file \"%s\".\n", outName);
+			printf("Check that the destination folder exists and that you have permission to write there.\n");
 			free(sourceFile.buffer.data);
 			free(myBBBuffer.data);
 			free(outName);
