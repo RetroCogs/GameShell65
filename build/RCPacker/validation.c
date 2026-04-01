@@ -32,6 +32,7 @@ int validateBuffers(const Buffer *originalBuffer, const Buffer *roundTripBuffer)
 
 	if (!g_rcpackerQuiet)
 	{
+		printf("\n");
 		printf("[Validate] Original size:   0x%08X bytes\n", (unsigned int)originalBuffer->size);
 		printf("[Validate] Round-trip size: 0x%08X bytes\n", (unsigned int)roundTripBuffer->size);
 	}
@@ -41,8 +42,13 @@ int validateBuffers(const Buffer *originalBuffer, const Buffer *roundTripBuffer)
 	{
 		if (!g_rcpackerQuiet)
 		{
-			printf("Validation OK: round-trip data matches original input.\n");
 			printf("[Validate] Compared bytes:  0x%08X\n", (unsigned int)originalBuffer->size);
+			printf("\n");
+			printf("Validation OK: round-trip data matches original input.\n");
+		}
+		else
+		{
+			printf("validation ok\n");
 		}
 		return 0;
 	}

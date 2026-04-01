@@ -310,6 +310,7 @@ int decrunchToMemory(const Buffer *packedBuffer, Buffer *outBuffer)
 
 	if (!g_rcpackerQuiet)
 	{
+		printf("\n");
 		printf("[Decrunch] Input .b2 size:  0x%08X bytes\n", (unsigned int)packedBuffer->size);
 		printf("[Decrunch] Load address:    0x%08X\n", loadAddr);
 		printf("[Decrunch] Original size:   0x%08X bytes\n", origSize);

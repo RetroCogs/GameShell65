@@ -31,9 +31,10 @@ int main(int argc, char *argv[])
 	std::vector<std::string> inputFiles;
 	int argi;
 
+	printf("RCPacker - ByteBoozer2.0 cruncher.\n");
+
 	if (argc == 1)
 	{
-		printf("RCPacker - ByteBoozer2.0 cruncher.\n\n");
 		printUsage();
 		return 0;
 	}
@@ -102,7 +103,6 @@ int main(int argc, char *argv[])
 
 	if (inputFiles.empty())
 	{
-		printf("RCPacker - ByteBoozer2.0 cruncher.\n");
 		printf("\n");
 		printf("Error: You did not give rcPacker any input files to pack.\n");
 		printf("Please provide at least one input file on the command line.\n");
@@ -126,11 +126,6 @@ int main(int argc, char *argv[])
 		sourceFile.buffer.size = 0;
 		myBBBuffer.data = NULL;
 		myBBBuffer.size = 0;
-
-		if (!g_rcpackerQuiet)
-		{
-			printf("RCPacker - ByteBoozer2.0 cruncher.\n\n");
-		}
 
 		if (outputNameArg != NULL)
 		{
@@ -159,6 +154,11 @@ int main(int argc, char *argv[])
 		{
 			strncpy(outName, inputFiles[0].c_str(), outNameLen - 4);
 			strncpy(outName + (outNameLen - 4), ".b2", 4);
+		}
+
+		if (!g_rcpackerQuiet)
+		{
+			printf("\n");
 		}
 
 		for (fileIndex = 0; fileIndex < inputFiles.size(); fileIndex++)
@@ -278,6 +278,12 @@ int main(int argc, char *argv[])
 			b3Buffer.data = NULL;
 			b3Buffer.size = 0;
 
+			if (!g_rcpackerQuiet)
+			{
+				printf("\n");
+				printf("Validating round-trip decrunch output against original input...\n");
+			}
+
 			exitCode = decrunchToMemory(&myBBBuffer, &b3Buffer);
 			if (exitCode == 0)
 			{
@@ -289,16 +295,14 @@ int main(int argc, char *argv[])
 
 		if (g_rcpackerQuiet)
 		{
-			printf("summary files=$%08X source=$%08X pad=$%08X packed=$%08X",
-				(unsigned int)inputFiles.size(),
+			printf("output=\"%s\"", outName);
+			printf(" summary source=$%08X packed=$%08X",
 				(unsigned int)totalInputBytes,
-				(unsigned int)totalPaddingBytes,
 				(unsigned int)myBBBuffer.size);
 			if (sourceFile.buffer.size > 0)
 			{
 				printf(" ratio=%.2f%%", packedRatio);
 			}
-			printf(" output=\"%s\"\n", outName);
 		}
 
 		free(sourceFile.buffer.data);
