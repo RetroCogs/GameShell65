@@ -45,6 +45,26 @@ Each layout determines:
 - character height
 - bytes used per row in the pixie work list
 
+### Example char layout for `Pixie_32x32.id`
+
+Each char is 64 bytes and the index used for DrawBaseChar is the physical address of the graphics data / 64.
+
+A `32x32` NCM pixie is `2` chars wide by `4` chars high. The char order starts at the **top-left**, increments **down the column**, then proceeds to the **next column**:
+
+```text
++-------+-------+
+|   0   |   4   |
++-------+-------+
+|   1   |   5   |
++-------+-------+
+|   2   |   6   |
++-------+-------+
+|   3   |   7   |
++-------+-------+
+```
+
+So the left column uses chars `0,1,2,3`, and the right column uses chars `4,5,6,7`.
+
 ---
 
 ## Frame flow
