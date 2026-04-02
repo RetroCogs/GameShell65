@@ -215,6 +215,11 @@ have_count:
 // Internal helpers
 // -----------------------------------------------------------------------------------------------
 
+// Wait until the floppy controller reports that its current command is finished.
+//
+// The FDC sets BUSY while a step, spin-up, read, or write command is in progress.
+// Most higher-level routines issue a command to $D081 and then call this helper
+// before touching the FDC again.
 loader_wait_for_busy_clear:
 {
 !:	lda LDR_FDC_STATUS
@@ -223,6 +228,15 @@ loader_wait_for_busy_clear:
 	rts
 }
 
+// Ensure the drive is ready for FDC operations.
+//
+// This routine:
+// - marks the drive as in use
+// - disables auto-tune
+// - spins up motor + LED if needed
+// - homes the head to track 0 the first time it is used
+//
+// Homing is done by issuing repeated STEP_OUT commands until TK0 is observed.
 loader_prepare_drive:
 {
 	lda #$01
@@ -272,6 +286,11 @@ loader_release_drive:
 	rts
 }
 
+// Move the head from loader_current_track to loader_phys_track.
+//
+// `loader_phys_track` is already in physical 0..79 form here.
+// The FDC only moves one track per command, so we step in/out until the current
+// track matches the requested one.
 loader_step_to_track:
 {
 step_loop:
@@ -298,6 +317,12 @@ done:
 	rts
 }
 
+// Select which half of the 512-byte sector buffer the CPU will see when reading
+// through $D087.
+//
+// On a 1581 disk each physical sector contains two logical 256-byte blocks.
+// The MEGA65 FDC exposes either the first half or second half depending on the
+// SWAP bit. We also reset the CPU buffer read pointer before changing the view.
 loader_set_fdc_swap:
 {
 	pha
@@ -317,6 +342,19 @@ clear_swap:
 	rts
 }
 
+// Load the requested logical file block into the FDC sector buffer.
+//
+// Inputs:
+// - `loader_req_track` = logical file track (1..80)
+// - `loader_req_block` = logical file block (0..39)
+//
+// Behaviour:
+// - validates track/block
+// - converts logical block to physical track/sector/side
+// - avoids re-reading if the same physical sector is already buffered
+// - issues FDC read command when needed
+// - checks RNF/CRC status bits for failure
+// - finally sets the SWAP state so CPU reads from the correct 256-byte half
 loader_load_block:
 {
 	lda loader_req_track
@@ -328,7 +366,12 @@ loader_load_block:
 	cmp #40
 	lbcs bad_location
 
-	// logical block -> physical sector/side
+	// Convert logical 1581 file location to physical disk location.
+	//
+	// Logical blocks are numbered 0..39 per track.
+	// Each PHYSICAL sector holds two logical blocks, so:
+	//   physical_sector = (block / 2) + 1
+	// and sectors 1..10 are on side 0, sectors 11..20 are on side 1.
 	lda loader_req_block
 	lsr
 	sta loader_phys_sector			// 0..19
@@ -357,7 +400,9 @@ have_phys:
 	lda #$80					// select floppy buffer, not SD buffer
 	trb LDR_BUFSEL
 
-	// if same sector is already in buffer, just reset read pointer / swap state
+	// If the same physical sector is already in the FDC buffer, we do not need to
+	// read the disk again. We only need to reset the CPU read pointer and select
+	// the correct half via SWAP.
 	lda loader_disk_num
 	cmp loader_last_disk
 	bne do_read
@@ -398,6 +443,8 @@ side_done:
 	lda loader_phys_side
 	sta LDR_FDC_SIDE
 
+	// Disable SWAP before the actual read so the sector buffer is filled and the
+	// CPU pointer starts from the beginning of the 512-byte sector.
 	lda #LDR_FDC_SWAP_MASK			// disable swap before reading the physical sector
 	trb LDR_FDC_CONTROL
 	lda #LDR_CMD_CLR_BUFFER_PTRS
@@ -406,6 +453,9 @@ side_done:
 	sta LDR_FDC_COMMAND
 
 wait_found:
+	// Wait until either:
+	// - RDREQ says the requested sector has been found, or
+	// - RNF/CRC indicates a failure.
 	lda LDR_FDC_STATUS2
 	and #LDR_FDC_RDREQ_MASK
 	bne sector_found
@@ -444,6 +494,17 @@ bad_location:
 	jmp loader_error
 }
 
+// Search the disk directory for the filename stored in `loader_filename_buf`.
+//
+// The 1581 directory starts at logical track 40, block 3. Each logical directory
+// block contains 8 directory entries of 32 bytes each. We iterate over the chain,
+// and for each entry compare:
+// - file type
+// - first track / first block validity
+// - 16-byte filename field
+//
+// On success, `loader_next_track` / `loader_next_block` become the first block of
+// the file data chain.
 loader_search_file:
 {
 	lda #40
@@ -521,6 +582,14 @@ not_found:
 	rts
 }
 
+// Copy `A` bytes of payload from the currently selected FDC logical block half
+// to the 32-bit destination pointer in `loader_target_ptr`.
+//
+// Important detail:
+// - The first two bytes of the block (next track / next block) have already been
+//   consumed before this routine is called.
+// - Therefore this routine copies only the data payload bytes remaining in the
+//   block: normally 254 bytes, or fewer on the final EOF block.
 loader_copy_bytes_from_fdc:
 {
 	sta loader_copy_count
@@ -547,6 +616,10 @@ done:
 	rts
 }
 
+// Fatal loader error handler.
+//
+// The error code is stored in `loader_error_code`, border colours are changed for
+// visible debugging feedback, and execution is trapped in an infinite loop.
 loader_error:
 {
 	sta loader_error_code
