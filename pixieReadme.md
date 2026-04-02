@@ -65,6 +65,20 @@ A `32x32` NCM pixie is `2` chars wide by `4` chars high. The char order starts a
 
 So the left column uses chars `0,1,2,3`, and the right column uses chars `4,5,6,7`.
 
+### Example char layout for `64x16`
+
+A `64x16` NCM pixie would be `4` chars wide by `2` chars high. Using the same ordering rule — start at the **top-left**, increment **down the column**, then move to the **next column** — the layout would be:
+
+```text
++-------+-------+-------+-------+
+|   0   |   2   |   4   |   6   |
++-------+-------+-------+-------+
+|   1   |   3   |   5   |   7   |
++-------+-------+-------+-------+
+```
+
+So each column is filled top-to-bottom before moving right.
+
 ---
 
 ## Frame flow

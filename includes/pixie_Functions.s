@@ -37,4 +37,5 @@
 .const Pixie_32x24 = Pixie_AddLayout(32, 24)
 .const Pixie_32x32 = Pixie_AddLayout(32, 32)
 .const Pixie_48x48 = Pixie_AddLayout(48, 48)
+.const Pixie_64x16 = Pixie_AddLayout(64, 16)
 
