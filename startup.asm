@@ -48,6 +48,10 @@
 .const CREDITS_SCREEN_WIDTH = 256
 .const CREDITS_SCREEN_HEIGHT = 224
 
+// Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
+//
+.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
+
 // ------------------------------------------------------------
 //
 #import "m65macros.s"
@@ -55,14 +59,11 @@
 #import "layers_Functions.s"
 #import "layout_Functions.s"
 #import "assets_Functions.s"
+#import "pixie_Functions.s"
 
 // ------------------------------------------------------------
 // Layer constants
 //
-
-// Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
-//
-.const NUM_PIXIEWORDS = 96					// Must be < 128 (to keep indexing within range)
 
 // ------------------------------------------------------------
 // Layer layout for title screen example
@@ -287,7 +288,7 @@ Entry:
 	jsr InitBGMap
 
 	// Setup the initial game state
-	lda #GStatePlay
+	lda #GStateTitles
 	sta RequestGameState
 	jsr SwitchGameStates
 

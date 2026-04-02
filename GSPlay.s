@@ -267,7 +267,7 @@ DrawObjData:
 	sta $d020
 #endif 
 
-	ldx #PIXIE_32x32
+	ldx #Pixie_32x32.id
 	jsr DrawPixie
 
 	plx

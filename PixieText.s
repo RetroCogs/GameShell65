@@ -165,7 +165,7 @@ _noeffect:
 	sta DrawPosY+1
 
 _dodraw:
-	ldx #PIXIE_16x16
+	ldx #Pixie_16x16.id
  	jsr DrawPixie
 
  	lda mult2:#$00

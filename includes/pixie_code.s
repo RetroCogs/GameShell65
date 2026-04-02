@@ -1,18 +1,5 @@
 // ------------------------------------------------------------
 //
-.enum 
-{
-	PIXIE_16x8,
-	PIXIE_16x16,
-	PIXIE_16x24,
-	PIXIE_16x32,
-	PIXIE_32x8,
-	PIXIE_32x16,
-	PIXIE_32x24,
-	PIXIE_32x32,
-	PIXIE_48x48
-}
-
 .segment Zeropage "Pixie ZP"
 
 DrawPosX:		.byte $00,$00
@@ -106,13 +93,14 @@ ClearWorkPixies:
 
 // ------------------------------------------------------------
 //
-yShiftTable:	.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)|$10,(6<<5)|$10,(7<<5)|$10
-yMaskTable:		.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
+yShiftTable:		.byte (0<<5)|$10,(1<<5)|$10,(2<<5)|$10,(3<<5)|$10,(4<<5)|$10,(5<<5)|$10,(6<<5)|$10,(7<<5)|$10
+yMaskTable:			.byte %11111111,%11111110,%11111100,%11111000,%11110000,%11100000,%11000000,%10000000
 
 // Number of chars wide and high for each of the pixie layouts
-pixieLayoutH:	.byte 1,2,3,4,1,2,3,4,6
-pixieLayoutW:	.byte 1,1,1,1,2,2,2,2,3
-pixieLayoutB:	.byte 4,4,4,4,6,6,6,6,8
+pixieLayoutH:		.fill PixieLayoutList.size(), PixieLayoutList.get(i).charsHigh
+pixieLayoutW:		.fill PixieLayoutList.size(), PixieLayoutList.get(i).charsWide
+pixieLayoutB:		.fill PixieLayoutList.size(), PixieLayoutList.get(i).numBytesPerRow
+pixieMaxRowOffs:	.fill PixieLayoutList.size(), PixieLayoutList.get(i).maxRowOffs
 
 DrawPixie:
 {
@@ -120,7 +108,7 @@ DrawPixie:
 	.var attribPtr 	= Tmp+2					// 16 bit
 
 	.var tcharIndx 	= Tmp1+0				// 16 bit
-	.var xpos		= Tmp1+2				// 16 bit
+											// unused 16 bits = Tmp1+2
 
 	.var charIndx 	= Tmp2+0				// 16 bit
 	.var yShift 	= Tmp2+2				// 8 bit
@@ -128,8 +116,8 @@ DrawPixie:
 
 	.var charHigh 	= Tmp3+0				// 8 bit
 	.var charWidth 	= Tmp3+1				// 8 bit
-	.var charStep	= Tmp3+2				// 8 bit
-	.var maxRowOffs	= Tmp3+3				// 8 bit
+	.var maxRowOffs	= Tmp3+2				// 8 bit
+											// unused 8 bits = Tmp3+3
 
 	phx
 	phy
@@ -138,17 +126,15 @@ DrawPixie:
 	// Grab all of the params from the pixie layout
 	//
 	lda pixieLayoutH,x					
-	sta charStep						// Number of chars between columns
+	sta addRowOfChars.charStep			// Number of chars between columns
 	dec
 	sta charHigh						// Value for row loop = (num chars high - 1)
 
 	lda pixieLayoutW,x					
 	sta charWidth						// Value for column loop = (num chars wide - 1)
 
-	sec
-	lda #(NUM_PIXIEWORDS*2)				// (3*2) = 6
-	sbc pixieLayoutB,x					// -6
-	sta maxRowOffs						// 0
+	lda pixieMaxRowOffs,x
+	sta maxRowOffs
 
 	// Map in the pixie working buffer to allow 16bit access
 	//
@@ -200,15 +186,34 @@ no_vertical_scrolling:
 	sta yShift
 
 	lda DrawPosX+0
-	sta xpos+0
+	sta addRowOfChars.xposLo
 	lda DrawPosX+1
 	and #$03
 	ora yShift
-	sta xpos+1
+	sta addRowOfChars.xposHi
+
+	lda DrawMode
+	sta addRowOfChars.usedrawmode
+	lda DrawPal
+	sta addRowOfChars.usedrawpal
 
 	// Calculate which row to add pixie data to, put this in X,
     // we use this to index the row tile / attrib ptrs
  	// 
+	lda DrawPosY+1
+	bmi above_FirstRow
+	bne done						// if in first 256 pixels vertically then we are on row 0, otherwise we need to calculate the row index
+	
+	lda DrawPosY+0
+	lsr	
+	lsr	
+	lsr	
+	tax
+	bra test_firstRow
+
+above_FirstRow:
+
+	// Do full signed / 8 to get the row index
 	lda DrawPosY+0
 	sta posy
 
@@ -225,6 +230,7 @@ no_vertical_scrolling:
 
 	lda posy:#$00
 	tax									// move yRow into X reg
+test_firstRow:
 	bmi middleRow						// if above first row then skip to middle section
 	cpx Layout.NumRows					// if below last row then done
 	bcs done
@@ -300,22 +306,22 @@ done:
 	do_draw:	
 		taz
 
-		lda PixieRowScreenPtrLo,x			// grab and advance tilePtr
+		lda PixieRowScreenPtrLo,x			// grab tilePtr
 		sta tilePtr+0
 		lda PixieRowScreenPtrHi,x
 		sta tilePtr+1
-		lda PixieRowAttribPtrLo,x			// grab and advance attribPtr
+		lda PixieRowAttribPtrLo,x			// grab attribPtr
 		sta attribPtr+0
 		lda PixieRowAttribPtrHi,x
 		sta attribPtr+1
 
 		// GOTOX
-		lda xpos+0							// tile = <xpos,>xpos | yShift
+		lda xposLo:#$00						// tile = <xpos,>xpos | yShift
 		sta (tilePtr),z
 		lda #$98							// attrib = $98 (transparent+gotox), $00
 		sta (attribPtr),z
 		inz
-		lda xpos+1
+		lda xposHi:#$00
 		sta (tilePtr),z
 		lda rowMask:#$ff
 		sta (attribPtr),z
@@ -331,22 +337,22 @@ done:
 		// Char
 		lda tcharIndx+0
 		sta (tilePtr),z
-		lda DrawMode
+		lda usedrawmode:#$00
 		sta (attribPtr),z
 		inz	
 		lda tcharIndx+1
 		sta (tilePtr),z
-		lda DrawPal
+		lda usedrawpal:#$00
 		sta (attribPtr),z
 		inz
-		
+				
 		clc									// move to the next column's char
 		lda tcharIndx+0
-		adc charStep
+		adc charStep:#$00
 		sta tcharIndx+0
-		lda tcharIndx+1
-		adc #$00
-		sta tcharIndx+1
+		bcc !+
+		inc tcharIndx+1
+	!:
 
 		dey
 		bne cloop
