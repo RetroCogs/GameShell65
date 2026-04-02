@@ -17,9 +17,9 @@ The pixie system uses these zero-page variables in `includes/pixie_code.s`:
 
 - `DrawPosX` / `DrawPosY` — 16-bit screen position
 - `DrawBaseChr` — first character index for the pixie graphic set
-- `DrawPal` — palette selector
+- `DrawPal` — palette selector (palIndex << 4) | $0f 
 - `DrawSChr` — sprite character offset within the graphic set
-- `DrawMode` — attribute mode byte used to select between NCM and FCM
+- `DrawMode` — attribute mode byte used to select between NCM ($08) and FCM ($00)
 - `PixieYShift` — vertical compensation when using TextPosY scrolling
 
 These are treated as the input parameters to `DrawPixie`.
