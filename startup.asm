@@ -214,9 +214,10 @@ Main: jmp Entry
 #import "assets_code.s"
 #import "layers_code.s"
 #import "system_code.s"
-#import "fastLoader.s"
+// #import "fastLoader.s"
 #import "keyb_code.s"
 #import "pixie_code.s"
+#import "loader.s"
 
 .segment Code "Decrunch"
 #import "build/RCPacker/decomp.s"
@@ -264,14 +265,19 @@ Entry:
 	lda #$00
 	sta $d020
 
-	// initialise fast load (start drive motor)
-	jsr fl_init
+	// initialise the loader
+	ldz #$00
+	jsr loader_init
 
-	LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
+	// initialise fast load (start drive motor)
+	// jsr fl_init
+
+	// LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
+	Loader_LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
 	Decomp32(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 
 	// done loading. stop drive motor
-	jsr fl_exit
+	// jsr fl_exit
 	
 	// Update screen positioning if PAL/NTSC has changed
 	jsr System.CenterFrameHorizontally
