@@ -40,13 +40,13 @@
 // Defines to describe the screen size
 //
 .const SCREEN_WIDTH = 320
-.const SCREEN_HEIGHT = 104
+.const SCREEN_HEIGHT = 200
 
 .const PLAY_SCREEN_WIDTH = 320
 .const PLAY_SCREEN_HEIGHT = 200
 
-.const CREDITS_SCREEN_WIDTH = 256
-.const CREDITS_SCREEN_HEIGHT = 224
+.const CREDITS_SCREEN_WIDTH = 320
+.const CREDITS_SCREEN_HEIGHT = 200
 
 // Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
@@ -204,8 +204,8 @@ Main: jmp Entry
 
 .print "--------"
 
-.const blobsBegin = StartSection("iffl", $00000, $40000)
-.const iffl0 = AddAsset("FS-IFFL0", "sdcard/data.bin")
+.const blobsBegin = StartSection("files", $00000, $40000)
+.const file0 = AddAsset("GS-FILE0", "sdcard/data.bin")
 .const blobsEnd = EndSection()
 
 .print "--------"
@@ -214,7 +214,6 @@ Main: jmp Entry
 #import "assets_code.s"
 #import "layers_code.s"
 #import "system_code.s"
-// #import "fastLoader.s"
 #import "keyb_code.s"
 #import "pixie_code.s"
 #import "loader.s"
@@ -266,19 +265,12 @@ Entry:
 	sta $d020
 
 	// initialise the loader
-	ldz #$00
 	jsr loader_init
 
-	// initialise fast load (start drive motor)
-	// jsr fl_init
+	Loader_LoadFile(bg0Chars.addr + file0.crunchAddress, file0.filenamePtr)
+	Decomp32(bg0Chars.addr + file0.crunchAddress, bg0Chars.addr)
 
-	// LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
-	Loader_LoadFile(bg0Chars.addr + iffl0.crunchAddress, iffl0.filenamePtr)
-	Decomp32(bg0Chars.addr + iffl0.crunchAddress, bg0Chars.addr)
 
-	// done loading. stop drive motor
-	// jsr fl_exit
-	
 	// Update screen positioning if PAL/NTSC has changed
 	jsr System.CenterFrameHorizontally
 	jsr System.CenterFrameVertically

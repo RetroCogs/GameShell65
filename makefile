@@ -31,7 +31,7 @@ all: data datablobs code disk
 disk: 
 	$(C1541) -format "game shell 65,0" d81 $(DISKNAME)
 	$(C1541) -attach $(DISKNAME) 8 -write bin/$(APPNAME).prg "game shell 65"
-	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin "fs-iffl0"
+	$(C1541) -attach $(DISKNAME) 8 -write sdcard/data.bin "gs-file0"
 
 datablobs: data
 	build/RCPacker/rcpacker -p 256 -v \

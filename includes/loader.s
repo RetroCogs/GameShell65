@@ -6,7 +6,7 @@
 // This is a compact assembly implementation of the same basic ideas:
 // - prepare and spin up the drive
 // - search the directory for a filename
-// - convert logical track/block to physical track/sector/side
+// - convert logical track/sector to physical track/sector/side
 // - load blocks into the FDC buffer
 // - copy file bytes to a true 32-bit destination address
 //
@@ -14,6 +14,23 @@
 // - It is meant as a small stand-alone loader module for GameShell65.
 // - Filenames are expected to be 0-terminated PETSCII strings.
 // - Default file type used by Loader_LoadFile() is PRG ($82).
+//
+// D81 track / sector / block layout summary:
+// - A .D81 is the 3.5" 1581 disk format: 80 tracks total.
+// - The MEGA65 FDC works in PHYSICAL terms: track 0..79, side 0/1,
+//   sector 1..10 per side, with each physical sector being 512 bytes.
+// - Commodore DOS file chains use LOGICAL track + sector/block values:
+//   track 1..80 and sector/block 0..39, where each logical block is 256 bytes.
+// - That means each 512-byte physical sector contains two 256-byte logical
+//   file blocks.
+// - This loader therefore converts logical file locations like this:
+//     logical track 1..80   -> physical track 0..79
+//     logical block 0..39   -> side 0/1 + physical sector 1..10
+//     logical block bit 0   -> which 256-byte half is selected via SWAP
+//
+// In other words: directory entries and file chains speak in Commodore DOS
+// logical blocks, while the FDC must be driven with physical track/side/sector
+// coordinates.
 // -----------------------------------------------------------------------------------------------
 
 .const LDR_FDC_CONTROL         = $d080
@@ -51,40 +68,41 @@
 
 // loader_error_code values
 .const LDR_ERR_FILE_NOT_FOUND  = $01
+.print ("loader_filename_ptr is at $" + toHexString(loader_filename_ptr))
 .const LDR_ERR_BAD_LOCATION    = $02
 .const LDR_ERR_SECTOR_ERROR    = $03
 
 .segment Zeropage "Loader ZP"
-loader_target_ptr:     .byte 0,0,0,0
-loader_filename_ptr:   .word 0
-loader_copy_count:     .byte 0
-loader_match:          .byte 0
-loader_entry_type:     .byte 0
-loader_entry_track:    .byte 0
-loader_entry_block:    .byte 0
-loader_req_track:      .byte 0
-loader_req_block:      .byte 0
-loader_phys_track:     .byte 0
-loader_phys_sector:    .byte 0
-loader_phys_side:      .byte 0
+loader_target_ptr:     	.byte 0,0,0,0
+loader_filename_ptr:   	.word 0
+loader_entry_type:     	.byte 0
+loader_entry_track:    	.byte 0
+loader_entry_sector:   	.byte 0
+loader_req_track:      	.byte 0
+loader_req_sector:     	.byte 0
+loader_phys_track:     	.byte 0
+loader_phys_sector:    	.byte 0
+loader_phys_side:      	.byte 0
 
 .print ("loader_filename_ptr is at $" + toHexString(loader_filename_ptr))
 
 .segment BSS "Loader State"
-loader_disk_num:       .byte 0
-loader_file_type:      .byte 0
-loader_next_track:     .byte 0
-loader_next_block:     .byte 0
-loader_current_track:  .byte 0
-loader_last_disk:      .byte 0
-loader_last_track:     .byte 0
-loader_last_sector:    .byte 0
-loader_last_side:      .byte 0
-loader_drive_spinning: .byte 0
-loader_drive_in_use:   .byte 0
-loader_initialized:    .byte 0
-loader_error_code:     .byte 0
-loader_filename_buf:   .fill 16, $a0
+loader_file_type:      	.byte 0
+loader_next_track:     	.byte 0
+loader_next_sector:		.byte 0
+
+loader_current_track:  	.byte 0
+
+loader_last_track:     	.byte 0
+loader_last_sector:    	.byte 0
+loader_last_side:      	.byte 0
+
+loader_drive_spinning: 	.byte 0
+loader_drive_in_use:   	.byte 0
+
+loader_initialized:    	.byte 0
+loader_error_code:     	.byte 0
+loader_filename_buf:   	.fill 16, $a0
 
 .print ("loader_error_code is at $" + toHexString(loader_error_code))
 
@@ -97,9 +115,6 @@ loader_filename_buf:   .fill 16, $a0
 //
 .macro Loader_LoadFile(addr, fname)
 {
-	lda #$00
-	sta loader_disk_num
-
 	lda #LDR_FILETYPE_PRG
 	sta loader_file_type
 
@@ -118,20 +133,18 @@ loader_filename_buf:   .fill 16, $a0
 
 loader_init:
 {
-	stz loader_disk_num
-
 	lda #LDR_FILETYPE_PRG
 	sta loader_file_type
 
-	stz loader_next_track
-	stz loader_next_block
-	stz loader_current_track
-	stz loader_drive_spinning
-	stz loader_drive_in_use
-	stz loader_initialized
+	lda #$00
+	sta loader_next_track
+	sta loader_next_sector
+	sta loader_current_track
+	sta loader_drive_spinning
+	sta loader_drive_in_use
+	sta loader_initialized
 
 	lda #$ff
-	sta loader_last_disk
 	sta loader_last_track
 	sta loader_last_sector
 	sta loader_last_side
@@ -141,12 +154,26 @@ loader_init:
 	rts
 }
 
+// Build the loader's fixed 16-byte filename buffer from a caller-provided
+// 0-terminated PETSCII string.
+//
+// Inputs:
+// - X/Y = address of filename string
+//
+// Behaviour:
+// - stores the original source pointer in `loader_filename_ptr`
+// - fills `loader_filename_buf` with $A0 padding bytes
+// - copies up to 16 characters from the source string
+// - stops early if a 0 terminator is encountered
+//
 loader_setup_filename:
 {
 	stx loader_filename_ptr+0
 	sty loader_filename_ptr+1
 
-	// Build a fixed 16-byte filename buffer padded with $0A.
+	// Build a fixed 16-byte filename buffer padded with $A0.
+
+	// Clear buffer
 	lda #$a0
 	ldx #$0f
 !:
@@ -154,20 +181,37 @@ loader_setup_filename:
 	dex
 	bpl !-
 
+	// Copy filename, stopping at 0 terminator or after 16 chars.
 	ldy #$00
 !:
-	cpy #$10
-	beq done_copy
 	lda (loader_filename_ptr),y
 	beq done_copy
 	sta loader_filename_buf,y
 	iny
-	bra !-
+	cpy #$10
+	bne !-
 
 done_copy:
 	rts
 }
 
+// Load the file named in `loader_filename_buf` into the 32-bit address stored in
+// `loader_target_ptr`.
+//
+// High-level logic:
+// 1) Prepare the drive and ensure the head/motor are ready.
+// 2) Search the disk directory for the requested filename.
+// 3) If found, follow the Commodore file sector chain one logical block at a time.
+// 4) For each file sector:
+//    - load the sector into the FDC sector buffer
+//    - read the first two bytes to get the next track/sector link
+//    - determine whether this is a full 254-byte payload sector or the final short sector
+//    - copy the payload bytes to the destination pointer and advance it
+// 5) When the chain ends (`next_track == 0`), release the drive and return.
+//
+// On failure, this routine jumps to `loader_error` with an appropriate
+// `LDR_ERR_*` code.
+//
 loader_load_file:
 {
 	jsr loader_prepare_drive
@@ -182,18 +226,21 @@ found_file:
 file_loop:
 	lda loader_next_track
 	sta loader_req_track
-	lda loader_next_block
-	sta loader_req_block
+	lda loader_next_sector
+	sta loader_req_sector
+
 	jsr loader_load_block
 
 	lda LDR_FDC_DATA			// next track of file chain
 	sta loader_next_track
 	lda LDR_FDC_DATA			// next block of file chain, or final byte count+1
-	sta loader_next_block
+	sta loader_next_sector
 
 	lda loader_next_track
 	bne full_block
-	lda loader_next_block
+
+	// Final block of the file: the next_sector byte is actually the final byte count + 1.
+	lda loader_next_sector
 	sec
 	sbc #$01
 	bra have_count
@@ -270,7 +317,8 @@ home_loop:
 	bra home_loop
 
 homed:
-	stz loader_current_track
+	lda #$00
+	sta loader_current_track
 	lda #$01
 	sta loader_initialized
 
@@ -278,19 +326,28 @@ done:
 	rts
 }
 
+// Release the floppy drive after a load completes or aborts.
+//
+// This clears the loader's in-use / spinning state and turns off the FDC
+// control outputs so the motor and activity LED are no longer asserted.
+//
 loader_release_drive:
 {
-	stz loader_drive_in_use
-	stz loader_drive_spinning
-	stz LDR_FDC_CONTROL
+	lda #$00
+	sta loader_drive_in_use
+	sta loader_drive_spinning
+	sta LDR_FDC_CONTROL
 	rts
 }
 
+// ------------------------------------------------------------------------
 // Move the head from loader_current_track to loader_phys_track.
 //
 // `loader_phys_track` is already in physical 0..79 form here.
+//
 // The FDC only moves one track per command, so we step in/out until the current
 // track matches the requested one.
+//
 loader_step_to_track:
 {
 step_loop:
@@ -302,27 +359,30 @@ step_loop:
 step_in:
 	lda #LDR_CMD_STEP_IN
 	sta LDR_FDC_COMMAND
-	jsr loader_wait_for_busy_clear
 	inc loader_current_track
 	bra step_loop
 
 step_out:
 	lda #LDR_CMD_STEP_OUT
 	sta LDR_FDC_COMMAND
-	jsr loader_wait_for_busy_clear
 	dec loader_current_track
+
+do_step:
+	jsr loader_wait_for_busy_clear
 	bra step_loop
 
 done:
 	rts
 }
 
+// ------------------------------------------------------------------------
 // Select which half of the 512-byte sector buffer the CPU will see when reading
 // through $D087.
 //
 // On a 1581 disk each physical sector contains two logical 256-byte blocks.
 // The MEGA65 FDC exposes either the first half or second half depending on the
 // SWAP bit. We also reset the CPU buffer read pointer before changing the view.
+//
 loader_set_fdc_swap:
 {
 	pha
@@ -342,70 +402,75 @@ clear_swap:
 	rts
 }
 
-// Load the requested logical file block into the FDC sector buffer.
+// ------------------------------------------------------------------------
+// Load the requested logical file sector into the FDC sector buffer.
 //
 // Inputs:
-// - `loader_req_track` = logical file track (1..80)
-// - `loader_req_block` = logical file block (0..39)
+// - `loader_req_track`  = logical file track (1..80)
+// - `loader_req_sector` = logical file sector index (0..39)
 //
 // Behaviour:
-// - validates track/block
-// - converts logical block to physical track/sector/side
+// - validates track/sector
+// - converts logical file sector index to physical track/sector/side
 // - avoids re-reading if the same physical sector is already buffered
 // - issues FDC read command when needed
 // - checks RNF/CRC status bits for failure
 // - finally sets the SWAP state so CPU reads from the correct 256-byte half
+//
 loader_load_block:
 {
+	// Logical track = 1 - 80, but physical track = 0 - 79
+	//
 	lda loader_req_track
 	lbeq bad_location
 	cmp #81
 	lbcs bad_location
 
-	lda loader_req_block
+	// Logical sector = 0 - 39, but physical sector = 1 - 10 + side
+	//
+	lda loader_req_sector
 	cmp #40
 	lbcs bad_location
 
-	// Convert logical 1581 file location to physical disk location.
+	// Convert logical 1581 file sector location to physical disk location.
 	//
-	// Logical blocks are numbered 0..39 per track.
-	// Each PHYSICAL sector holds two logical blocks, so:
-	//   physical_sector = (block / 2) + 1
+	// Logical file sectors are numbered 0..39 per track.
+	// Each PHYSICAL 512-byte sector holds two logical 256-byte file sectors, so:
+	//   physical_sector = (sector / 2) + 1
 	// and sectors 1..10 are on side 0, sectors 11..20 are on side 1.
-	lda loader_req_block
+	lda loader_req_sector
 	lsr
-	sta loader_phys_sector			// 0..19
+	inc
+	sta loader_phys_sector			// physical sectors are 1..20
 
 	lda loader_req_track
 	dec
 	sta loader_phys_track			// logical 1..80 -> physical 0..79
 
-	inc loader_phys_sector			// physical sectors are 1..20
 	lda loader_phys_sector
 	cmp #11
 	bcc side0
 
-	sub10:
 	sec
 	sbc #10
 	sta loader_phys_sector
+
 	lda #$01
 	sta loader_phys_side
+
 	bra have_phys
 
 side0:
-	stz loader_phys_side
+	lda #$00
+	sta loader_phys_side
 
 have_phys:
-	lda #$80					// select floppy buffer, not SD buffer
+	lda #$80						// select floppy buffer, not SD buffer
 	trb LDR_BUFSEL
 
 	// If the same physical sector is already in the FDC buffer, we do not need to
 	// read the disk again. We only need to reset the CPU read pointer and select
 	// the correct half via SWAP.
-	lda loader_disk_num
-	cmp loader_last_disk
-	bne do_read
 	lda loader_phys_track
 	cmp loader_last_track
 	bne do_read
@@ -416,8 +481,9 @@ have_phys:
 	cmp loader_last_side
 	bne do_read
 
-	lda loader_req_block
+	lda loader_req_sector
 	jsr loader_set_fdc_swap
+
 	rts
 
 do_read:
@@ -476,8 +542,6 @@ read_error:
 	jmp loader_error
 
 read_ok:
-	lda loader_disk_num
-	sta loader_last_disk
 	lda loader_phys_track
 	sta loader_last_track
 	lda loader_phys_sector
@@ -485,7 +549,7 @@ read_ok:
 	lda loader_phys_side
 	sta loader_last_side
 
-	lda loader_req_block
+	lda loader_req_sector
 	jsr loader_set_fdc_swap
 	rts
 
@@ -494,36 +558,42 @@ bad_location:
 	jmp loader_error
 }
 
+// ------------------------------------------------------------------------
 // Search the disk directory for the filename stored in `loader_filename_buf`.
 //
-// The 1581 directory starts at logical track 40, block 3. Each logical directory
-// block contains 8 directory entries of 32 bytes each. We iterate over the chain,
+// The 1581 directory starts at logical track 40, sector 3. Each logical directory
+// sector contains 8 directory entries of 32 bytes each. We iterate over the chain,
 // and for each entry compare:
 // - file type
-// - first track / first block validity
+// - first track / first sector validity
 // - 16-byte filename field
 //
-// On success, `loader_next_track` / `loader_next_block` become the first block of
+// On success, `loader_next_track` / `loader_next_sector` become the first sector of
 // the file data chain.
+//
 loader_search_file:
 {
+	// Directory chain starts at logical track 40, sector 3
 	lda #40
 	sta loader_next_track
 	lda #3
-	sta loader_next_block
+	sta loader_next_sector
 
 dir_loop:
+	// Load the next directory sector into the FDC buffer
 	lda loader_next_track
 	beq not_found
 	sta loader_req_track
-	lda loader_next_block
-	sta loader_req_block
+
+	lda loader_next_sector
+	sta loader_req_sector
+
 	jsr loader_load_block
 
 	lda LDR_FDC_DATA			// directory chain next track
 	sta loader_next_track
-	lda LDR_FDC_DATA			// directory chain next block
-	sta loader_next_block
+	lda LDR_FDC_DATA			// directory chain next sector
+	sta loader_next_sector
 
 	ldx #8						// 8 directory entries per logical block
 entry_loop:
@@ -532,17 +602,16 @@ entry_loop:
 	lda LDR_FDC_DATA
 	sta loader_entry_track
 	lda LDR_FDC_DATA
-	sta loader_entry_block
+	sta loader_entry_sector
 
-	lda #$01
-	sta loader_match
+	ldx #$01					// x = filename match found	
 
 	ldy #$00
 name_loop:
 	lda loader_filename_buf,y
 	cmp LDR_FDC_DATA
 	beq name_ok
-	stz loader_match
+	ldx #$00					// x = filename match not found
 name_ok:
 	iny
 	cpy #$10
@@ -561,16 +630,17 @@ skip_rest:
 	beq next_entry
 	cmp #81
 	bcs next_entry
-	lda loader_entry_block
+	lda loader_entry_sector
 	cmp #40
 	bcs next_entry
-	lda loader_match
+
+	cpx #$00
 	beq next_entry
 
 	lda loader_entry_track
 	sta loader_next_track
-	lda loader_entry_block
-	sta loader_next_block
+	lda loader_entry_sector
+	sta loader_next_sector
 	rts
 
 next_entry:
@@ -582,18 +652,21 @@ not_found:
 	rts
 }
 
-// Copy `A` bytes of payload from the currently selected FDC logical block half
+// ------------------------------------------------------------------------
+// Copy `A` bytes of payload from the currently selected logical file sector
 // to the 32-bit destination pointer in `loader_target_ptr`.
 //
 // Important detail:
-// - The first two bytes of the block (next track / next block) have already been
+// - The first two bytes of the sector (next track / next sector) have already been
 //   consumed before this routine is called.
 // - Therefore this routine copies only the data payload bytes remaining in the
-//   block: normally 254 bytes, or fewer on the final EOF block.
+//   sector: normally 254 bytes, or fewer on the final EOF sector.
+//
 loader_copy_bytes_from_fdc:
 {
-	sta loader_copy_count
+	tax
 	beq done
+
 	ldz #$00
 
 copy_loop:
@@ -609,17 +682,19 @@ copy_loop:
 	inc loader_target_ptr+3
 no_carry0:
 
-	dec loader_copy_count
+	dex
 	bne copy_loop
 
 done:
 	rts
 }
 
+// ------------------------------------------------------------------------
 // Fatal loader error handler.
 //
 // The error code is stored in `loader_error_code`, border colours are changed for
 // visible debugging feedback, and execution is trapped in an infinite loop.
+//
 loader_error:
 {
 	sta loader_error_code
