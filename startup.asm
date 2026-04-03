@@ -301,6 +301,8 @@ Entry:
 mainloop:
 	WaitVblank()
 
+	jsr System.UdpateScreenVisibility
+
 	DbgBord(4)
 
 	// !!!! - Update Buffers that will be seen next frame - !!!!

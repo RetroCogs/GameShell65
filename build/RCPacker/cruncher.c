@@ -14,8 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define log(format, ...)
-// #define log(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
+#define log(format, ...) fprintf (stderr, format, ## __VA_ARGS__)
 
 #define NUM_BITS_SHORT_0 3
 #define NUM_BITS_SHORT_1 6
@@ -114,7 +113,10 @@ static void ensureOutputCapacity(size_t needed)
 		newCapacity *= 2;
 	}
 
-	// printf("Increasing output buffer capacity to %zu bytes\n", newCapacity);
+	if (!g_rcpackerQuiet)
+	{
+		log("[Crunch] Increasing output buffer capacity to %zu bytes\n", newCapacity);
+	}
 
 	byte *newBuffer = (byte *)realloc(obuf, newCapacity);
 	if (newBuffer == NULL)
@@ -721,7 +723,7 @@ int writeOutput()
 			// Put Match
 			uint len = link - i;
 
-			log("$%04x: Mat(%i, %i)\n", i, len, offset);
+			// log("$%04x: Mat(%i, %i)\n", i, len, offset);
 
 			if (needCopyBit)
 			{
@@ -743,7 +745,7 @@ int writeOutput()
 			{
 				uint len = litLen < 255 ? litLen : 255;
 
-				log("$%04x: Lit(%i)\n", i, len);
+				// log("$%04x: Lit(%i)\n", i, len);
 
 				wBit(0);
 				wLength(len);

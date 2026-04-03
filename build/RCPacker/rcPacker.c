@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			printf("  input[%02zu]  start=$%08X  size=$%08X  pad=$%08X  \"%s\"\n",
+			printf("input(%02zu) start=$%08X  size=$%08X  pad=$%08X\t\"%s\"\n",
 				fileIndex + 1,
 				(unsigned int)startOffset,
 				(unsigned int)partFile.buffer.size,
@@ -295,14 +295,15 @@ int main(int argc, char *argv[])
 
 		if (g_rcpackerQuiet)
 		{
-			printf("output=\"%s\"", outName);
+			printf("output   ");
 			printf(" summary source=$%08X packed=$%08X",
 				(unsigned int)totalInputBytes,
 				(unsigned int)myBBBuffer.size);
 			if (sourceFile.buffer.size > 0)
 			{
-				printf(" ratio=%.2f%%", packedRatio);
+				printf(" ratio=%.2f", packedRatio);
 			}
+			printf("\t\"%s\"", outName);
 		}
 
 		free(sourceFile.buffer.data);

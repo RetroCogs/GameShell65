@@ -69,6 +69,10 @@ Initialization1:
 
 	cli
 
+	lda #$00
+	sta Flags
+	jsr UdpateScreenVisibility
+
 	rts
 }
 
@@ -120,13 +124,26 @@ Initialization2:
 	rts
 }
 
+UdpateScreenVisibility:
+{
+	lda #FlEnableScreen
+	bit Flags
+	bne _enable
+
+	lda #$10
+	trb $d011
+	rts
+
+_enable:
+	lda #$10
+	tsb $d011
+	rts
+}
+
 DisableScreen:
 {
 	lda #FlEnableScreen
 	trb Flags
-
-	lda #$00
-	sta $d011
 	rts
 }
 
@@ -134,9 +151,6 @@ EnableScreen:
 {
 	lda #FlEnableScreen
 	tsb Flags
-
-	lda #$1b
-	sta $d011
 	rts
 }
 
