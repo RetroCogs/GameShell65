@@ -223,6 +223,7 @@ loader_load_file:
 	jmp loader_error
 
 found_file:
+
 file_loop:
 	lda loader_next_track
 	sta loader_req_track
@@ -249,7 +250,7 @@ full_block:
 	lda #254
 
 have_count:
-	jsr loader_copy_bytes_from_fdc
+	jsr loader_copy_bytes_from_fdc_to_target
 
 	lda loader_next_track
 	bne file_loop
@@ -662,7 +663,7 @@ not_found:
 // - Therefore this routine copies only the data payload bytes remaining in the
 //   sector: normally 254 bytes, or fewer on the final EOF sector.
 //
-loader_copy_bytes_from_fdc:
+loader_copy_bytes_from_fdc_to_target:
 {
 	tax
 	beq done
