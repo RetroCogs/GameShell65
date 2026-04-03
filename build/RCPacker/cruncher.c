@@ -71,6 +71,7 @@ byte decrCode[DECRUNCHER_LENGTH] = {
 
 byte *ibuf;
 byte *obuf;
+size_t obufCapacity;
 uint ibufSize;
 int get;	// points to ibuf[]
 uint put; // points to obuf[]
@@ -100,11 +101,38 @@ byte curByte;
 byte curCnt;
 uint curIndex;
 
+static void ensureOutputCapacity(size_t needed)
+{
+	if (needed <= obufCapacity)
+	{
+		return;
+	}
+
+	size_t newCapacity = (obufCapacity > 0) ? obufCapacity : (size_t)memSize;
+	while (newCapacity < needed)
+	{
+		newCapacity *= 2;
+	}
+
+	// printf("Increasing output buffer capacity to %zu bytes\n", newCapacity);
+
+	byte *newBuffer = (byte *)realloc(obuf, newCapacity);
+	if (newBuffer == NULL)
+	{
+		fprintf(stderr, "Error: rcPacker ran out of memory while building the packed stream.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	obuf = newBuffer;
+	obufCapacity = newCapacity;
+}
+
 void wBit(uint bit)
 {
 	if (curCnt == 0)
 	{
 		obuf[curIndex] = curByte;
+		ensureOutputCapacity((size_t)put + 1);
 		curIndex = put;
 		curCnt = 8;
 		curByte = 0;
@@ -128,6 +156,7 @@ void wFlush()
 
 void wByte(uint b)
 {
+	ensureOutputCapacity((size_t)put + 1);
 	obuf[put] = b;
 	put++;
 }
@@ -777,7 +806,9 @@ bool crunch(const File *aSource, Buffer *outBuffer)
 
 	setupHelpStructures();
 	findMatches();
-	obuf = (byte *)malloc(memSize);
+	obuf = NULL;
+	obufCapacity = 0;
+	ensureOutputCapacity((size_t)ibufSize + ((size_t)ibufSize / 8) + 1024);
 	int margin = writeOutput();
 
 	uint packLen = put;
@@ -841,6 +872,9 @@ bool crunch(const File *aSource, Buffer *outBuffer)
 	free(context);
 	free(link);
 	free(rleInfo);
+	free(obuf);
+	obuf = NULL;
+	obufCapacity = 0;
 
 	return true;
 }

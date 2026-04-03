@@ -22,6 +22,6 @@ typedef enum { false = 0, true = 1 } bool;
 
 extern int g_rcpackerQuiet;
 
-#define memSize 65536
+#define memSize (65536*8)
 
 #endif // _bb_h_
