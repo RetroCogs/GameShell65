@@ -8,7 +8,7 @@
 	LDTK65=node $(GSBUILD)/parsers/ldtk65.js
 	JTAG=/dev/cu.usbserial-2516330596481
 	EMEGA65_FTP_ARGS=-e -F -c "put $(DISKNAME)" -c "quit"
-	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg.addr.mc
+	ETHERLOAD_ARGS=-r -m $(DISKNAME) bin/$(APPNAME).prg
 
 ifeq ($(windows), 1)
 	KICK=./build/KickAss65CE02-5.24f.jar

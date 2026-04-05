@@ -361,7 +361,7 @@ step_in:
 	lda #LDR_CMD_STEP_IN
 	sta LDR_FDC_COMMAND
 	inc loader_current_track
-	bra step_loop
+	bra do_step
 
 step_out:
 	lda #LDR_CMD_STEP_OUT
@@ -596,7 +596,7 @@ dir_loop:
 	lda LDR_FDC_DATA			// directory chain next sector
 	sta loader_next_sector
 
-	ldx #8						// 8 directory entries per logical block
+	ldz #8						// 8 directory entries per logical block
 entry_loop:
 	lda LDR_FDC_DATA
 	sta loader_entry_type
@@ -645,7 +645,7 @@ skip_rest:
 	rts
 
 next_entry:
-	dex
+	dez
 	bne entry_loop
 	bra dir_loop
 

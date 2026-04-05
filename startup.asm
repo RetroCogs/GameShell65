@@ -234,7 +234,7 @@ Main: jmp Entry
 Entry:
 {	
 	jsr System.Initialization1
-
+	
 	// Init the raster IRQ
 	//
  	sei
