@@ -17,6 +17,8 @@
 .const PIXIEANDSCREEN_RAM 	= $50000			// screen ram / pixie work ram goes here
 												// must be on a $100 alignment due to RRB pixie MAP behavior
 
+.const ATTIC_RAM = $8000000
+
 // --------------
 .segmentdef Zeropage [start=$02, min=$02, max=$fb, virtual]
 .segmentdef Code [start=$2001, max=$cfff]
@@ -204,7 +206,7 @@ Main: jmp Entry
 
 .print "--------"
 
-.const blobsBegin = StartSection("files", $00000, $40000)
+.const blobsBegin = StartSection("files", $00000, $400000)
 .const file0 = AddAsset("GS-FILE0", "sdcard/data.bin")
 .const blobsEnd = EndSection()
 
@@ -269,7 +271,6 @@ Entry:
 
 	Loader_LoadFile(bg0Chars.addr + file0.crunchAddress, file0.filenamePtr)
 	Decomp32(bg0Chars.addr + file0.crunchAddress, bg0Chars.addr)
-
 
 	// Update screen positioning if PAL/NTSC has changed
 	jsr System.CenterFrameHorizontally
