@@ -183,6 +183,11 @@ Decomp:
 	sta decomp_bits
 
 DLoop:
+	lda $d020
+	inc
+	and #$0f
+	sta $d020
+	
 	GetNextBit()
 	bcs Match
 
