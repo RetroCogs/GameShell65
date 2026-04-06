@@ -219,7 +219,7 @@ Main: jmp Entry
 #import "loader.s"
 
 .segment Code "Decrunch"
-#import "build/RCPacker/decomp.s"
+#import "decomp.s"
 
 // ------------------------------------------------------------
 //

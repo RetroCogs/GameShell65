@@ -19,7 +19,7 @@ ifeq ($(windows), 1)
 	ETHERLOAD=d:/PCTOOLS/etherload.exe
 else
 	KICK=./build/KickAss65CE02-5.24f.jar
-	C1541=/opt/homebrew/Cellar/vice/3.8/bin/c1541
+	C1541=/opt/homebrew/Cellar/vice/3.10/bin/c1541
 	XEMU=/Applications/Xemu/xmega65.app/Contents/MacOS/xmega65
 	MEGA65_FTP=~/Applications/Mega65/mega65_ftp.osx
 	EMEGA65_FTP=~/Documents/MEGA65/mega65_ftp.osx
