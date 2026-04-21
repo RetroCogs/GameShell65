@@ -1,18 +1,12 @@
 //--------------------------------------------------------
 // Macros (can't put macros in namespace)
-.macro Layer_SetRenderFunc(layerId, renderFunc, rowFunc)
+.macro Layer_SetRenderFunc(layerId, renderFunc)
 {
  	ldx #layerId
-
 	lda #<renderFunc
 	sta Layers.RenderFuncLo,x
 	lda #>renderFunc
 	sta Layers.RenderFuncHi,x
-
-	lda #<rowFunc
-	sta Layers.RowFuncLo,x
-	lda #>rowFunc
-	sta Layers.RowFuncHi,x
 }
 
 //--------------------------------------------------------
@@ -104,62 +98,6 @@ SetFineScrollY:
 	lda shiftOffsets2,y
 	sta YShift,x
 	dex
-
-	rts
-}
-
-// ------------------------------------------------------------
-// For the given layer, write the scroll X position
-//
-// data_base_offs 	= ptr to first byte of current row
-//
-// x 				= row index
-// y 				= layer number
-//
-UpdateScrollPosition:
-{
-	.var tile_ptr = Tmp			// 32bit
-	.var attrib_ptr = Tmp1		// 32bit
-	.var gotoOffs = Tmp2		// 16bit
-
-	lda Layers.ScrollUpdate,y
-	lbeq !layerskip+
-
-	// lda #$00
-	// sta Layers.ScrollUpdate,y
-
-	lda Layers.Trans,y
-	ora #$08				// Add rowmask flag
-	sta transFlag
-
-	// setup the gotox offset
-	clc
-	lda Layers.LogOffsLo,y
-	adc data_base_offs+0
-	sta gotoOffs+0
-	lda Layers.LogOffsHi,y
-	adc data_base_offs+1
-	sta gotoOffs+1
-
-	_set32im(ScreenRam, tile_ptr)
-    _add16(tile_ptr, gotoOffs, tile_ptr)
-	_set32im(COLOR_RAM, attrib_ptr)
-    _add16(attrib_ptr, gotoOffs, attrib_ptr)
-
-	// Set GotoX position
-	ldz #0
-	lda Layers.FineScrollXLo,y
-	sta ((tile_ptr)), z
-	lda transFlag:#$10
-	sta ((attrib_ptr)),z
-	inz
-	lda YShift,y
-	ora Layers.FineScrollXHi,y
-	sta ((tile_ptr)), z
-	lda YMask,y
-	sta ((attrib_ptr)),z
-
-!layerskip:
 
 	rts
 }
@@ -258,49 +196,12 @@ UpdateData:
 	.var dst_y_size = Tmp7			// 16bit
 	.var src_y_and = Tmp7+2			// 16bit
 
-	// We want to copy a single line from PixieWorkRAM into the Screen / Color RAM
-	//
-	// data_base_offs 	= offset into the current row that we want to copy to
-	//
-	// x 				= row index
-	// y 				= layer index
-	//
-	UpdatePixieRow:
-	{
-		_set32im(PixieWorkTiles, src_tile_ptr)
-		_set32im(PixieWorkAttrib, src_attrib_ptr)
-
-		_add16(Layout.PixieGotoOffs, data_base_offs, dst_offset)
-		_set16im(0, src_x_offset)
-
-		txa
-		sta src_y_offset+0
-		lda	#$00
-		sta src_y_offset+1
-
-		_set16im(Layout1_Pixie.DataSize, src_x_size)
-
-		_set16(src_x_size, copy_width)
-
-		jsr CopyRowLayerChunks		
-
-		rts
-	}
-
-	// We want to copy a single line from PixieWorkRAM into the Screen / Color RAM
-	//
-	// data_base_offs 	= offset into the current row that we want to copy to
-	//
-	// x 				= row index
-	// y 				= layer index
-	//
 	UpdatePixie: 
 	{
 		_set32im(PixieWorkTiles, src_tile_ptr)
 		_set32im(PixieWorkAttrib, src_attrib_ptr)
 
 		_set16(Layout.PixieGotoOffs, dst_offset)
-		// _add16(Layout.PixieGotoOffs, data_base_offs, dst_offset)
 		_set16im(0, src_x_offset)
 		_set16im(0, src_y_offset)
 
@@ -551,79 +452,11 @@ UpdateData:
 		rts
 	}
 
-	InitCopyConstants:
-	{
-		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
-		lda #$00								// always this value, set outside loop!
-		sta tileSourceBank
-		lda #PIXIEANDSCREEN_RAM>>20				// always this value, set outside loop!
-		sta tileDestBank
-		lda #[PIXIEANDSCREEN_RAM >> 16]			// always this value, set outside loop!
-		and #$0f
-		sta tileDest+2
-
-		// Attribs are copied from Bank 0 to (COLOR_RAM>>20)
-		lda #$00								// always this value, set outside loop!	
-		sta attribSourceBank
-		lda #COLOR_RAM>>20						// always this value, set outside loop!	
-		sta attribDestBank
-		lda #[COLOR_RAM >> 16]					// always this value, set outside loop!
-		and #$0f
-		sta attribDest+2		
-		rts
-	}
-
-	// Copy a single row of tile/attrib data to target buffers
-	// 
-	// inputs:	src_tile_ptr
-	//			src_attrib_ptr
-	//			src_x_offset
-	//			src_y_offset
-	//			dst_offset
-	//
-	CopyRowLayerChunks: 
-	{
-		_set16(copy_width, tileLength)
-		_set16(copy_width, attribLength)
-
-		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
-		lda src_tile_ptr+2
-		sta tileSource+2
-
-		// Attribs are copied from Bank 0 to (COLOR_RAM>>20)
-		lda src_attrib_ptr+2
-		sta attribSource+2
-
-		// DMA tile rows
-		//
-		_mul16(src_y_offset, src_x_size, src_tile_ptr, tileSource)
-		_add16(tileSource, src_x_offset, tileSource)
-
-		_add16im(dst_offset, ScreenRam, tileDest)
-
-		RunDMAJobHi(TileJob)
-		
-		RunDMAJobLo(TileJob)
-
-		// DMA attribute rows
-		//
-		_mul16(src_y_offset, src_x_size, src_attrib_ptr, attribSource)
-		_add16(attribSource, src_x_offset, attribSource)
-		
-		_add16im(dst_offset, COLOR_RAM, attribDest)
-
-		RunDMAJobHi(AttribJob)
-		RunDMAJobLo(AttribJob)
-
-		rts 
-	}
-
 	// Copy a column of tile/attrib data to target buffers
 	// 
 	// inputs:	src_tile_ptr
 	//			src_attrib_ptr
 	//			src_x_offset
-	//			src_y_offset
 	//			dst_offset
 	//			copy_height
 	//
@@ -633,18 +466,31 @@ UpdateData:
 		_set16(copy_width, attribLength)
 
 		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
+		lda #$00
+		sta tileSourceBank
+		lda #PIXIEANDSCREEN_RAM>>20
+		sta tileDestBank
 		lda src_tile_ptr+2
 		sta tileSource+2
+		lda #[PIXIEANDSCREEN_RAM >> 16]
+		and #$0f
+		sta tileDest+2
 
 		// Attribs are copied from Bank 0 to (COLOR_RAM>>20)
+		lda #$00
+		sta attribSourceBank
+		lda #COLOR_RAM>>20
+		sta attribDestBank
 		lda src_attrib_ptr+2
 		sta attribSource+2
+		lda #[COLOR_RAM >> 16]
+		and #$0f
+		sta attribDest+2
 
 		// DMA tile rows
 		//
 		_mul16(src_y_offset, src_x_size, src_tile_ptr, tileSource)
 		_add16(tileSource, src_x_offset, tileSource)
-
 		_add16im(dst_offset, ScreenRam, tileDest)
 
 		RunDMAJobHi(TileJob)
@@ -664,7 +510,6 @@ UpdateData:
 		//
 		_mul16(src_y_offset, src_x_size, src_attrib_ptr, attribSource)
 		_add16(attribSource, src_x_offset, attribSource)
-		
 		_add16im(dst_offset, COLOR_RAM, attribDest)
 
 		RunDMAJobHi(AttribJob)
@@ -681,7 +526,6 @@ UpdateData:
 		bne !aloop-
 
 		rts 
-	}
 
 	TileJob:
 		.byte $0A 						// Request format is F018A
@@ -726,6 +570,7 @@ UpdateData:
 		//byte 07
 	attribDest:
 		.byte $00,$00,$00				// Destination & $ffff, [[Destination >> 16] & $0f]
+	}
 }
 
 .segment Data "Layer Data"
@@ -751,9 +596,6 @@ ScrollUpdate:	.fill LayerList.size(), $00
 
 RenderFuncLo:	.fill LayerList.size(), $00
 RenderFuncHi:	.fill LayerList.size(), $00
-
-RowFuncLo:		.fill LayerList.size(), $00
-RowFuncHi:		.fill LayerList.size(), $00
 
 ScrollXLo:		.fill LayerList.size(), $40
 ScrollXHi:		.fill LayerList.size(), $01

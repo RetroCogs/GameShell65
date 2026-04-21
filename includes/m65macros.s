@@ -257,24 +257,6 @@ start:
 }
 
 // D = C + (A * B)
-.macro _mulA_16(B,C,D)
-{
-	sta $d770					// mul A lsb
-
-	lda #$00
-	sta $d771
-	sta $d772
-	sta $d776
-
-	lda B+0
-	sta $d774					// mul B lsb
-	lda B+1
-	sta $d775					// mul B msb
-
-	_add16(C, $d778, D)
-}
-
-// D = C + (A * B)
 .macro _mul16(A,B,C,D)
 {
 	lda #$00

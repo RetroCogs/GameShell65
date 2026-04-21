@@ -36,10 +36,10 @@ gsIniPlay:
 	ldx #Layout2.id
 	jsr Layout.SelectLayout
 
-	Layer_SetRenderFunc(Layout2_BG0.id, RenderLayout2BG0, RenderNop)
-	Layer_SetRenderFunc(Layout2_BG1.id, RenderLayout2BG1, RenderNop)
-	Layer_SetRenderFunc(Layout2_Pixie.id, RenderNop, Layers.UpdateData.UpdatePixieRow)
-	Layer_SetRenderFunc(Layout2_EOL.id, RenderNop, RenderNop)
+	Layer_SetRenderFunc(Layout2_BG0.id, RenderLayout2BG0)
+	Layer_SetRenderFunc(Layout2_BG1.id, RenderLayout2BG1)
+	Layer_SetRenderFunc(Layout2_Pixie.id, Layers.UpdateData.UpdatePixie)
+	Layer_SetRenderFunc(Layout2_EOL.id, RenderNop)
 
 	_set16(Layout.LayoutWidth, Tmp)
 	
