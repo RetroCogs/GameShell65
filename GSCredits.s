@@ -34,14 +34,14 @@ gsIniCredits:
 	ldx #Layout3.id
 	jsr Layout.SelectLayout
 
-	Layer_SetRenderFunc(Layout3_BG0a.id, RenderLayout3BG0a)
-	Layer_SetRenderFunc(Layout3_BG0b.id, RenderLayout3BG0b)
-	Layer_SetRenderFunc(Layout3_BG1a.id, RenderLayout3BG1a)
-	Layer_SetRenderFunc(Layout3_BG1b.id, RenderLayout3BG1b)
-	Layer_SetRenderFunc(Layout3_Pixie.id, Layers.UpdateData.UpdatePixie)
-	Layer_SetRenderFunc(Layout3_BG2a.id, RenderLayout3BG2a)
-	Layer_SetRenderFunc(Layout3_BG2b.id, RenderLayout3BG2b)
-	Layer_SetRenderFunc(Layout3_EOL.id, RenderNop)
+	Layer_SetRenderFunc(Layout3_BG0a.id, RenderLayout3BG0a, RenderNop)
+	Layer_SetRenderFunc(Layout3_BG0b.id, RenderLayout3BG0b, RenderNop)
+	Layer_SetRenderFunc(Layout3_BG1a.id, RenderLayout3BG1a, RenderNop)
+	Layer_SetRenderFunc(Layout3_BG1b.id, RenderLayout3BG1b, RenderNop)
+	Layer_SetRenderFunc(Layout3_Pixie.id, RenderNop, Layers.UpdateData.UpdatePixieRow)
+	Layer_SetRenderFunc(Layout3_BG2a.id, RenderLayout3BG2a, RenderNop)
+	Layer_SetRenderFunc(Layout3_BG2b.id, RenderLayout3BG2b, RenderNop)
+	Layer_SetRenderFunc(Layout3_EOL.id, RenderNop, RenderNop)
 
 	_set16(Layout.LayoutWidth, Tmp)
 	

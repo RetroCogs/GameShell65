@@ -1,4 +1,10 @@
 //--------------------------------------------------------
+//
+.segment Zeropage "Layout Zeropage"
+
+data_base_offs:	.word	$0000
+
+//--------------------------------------------------------
 // Layout
 //--------------------------------------------------------
 .namespace Layout
@@ -84,6 +90,8 @@ SelectLayout:
 	lda Layers.LogOffsHi,y
 	sta PixieGotoOffs+1
 
+	jsr Layers.UpdateData.InitEOL
+
 	rts
 }
 
@@ -91,6 +99,48 @@ SelectLayout:
 //
 UpdateBuffers:
 {
+	jsr Layers.UpdateData.InitCopyConstants
+
+	// Reset offset into Screen/Color buffers
+	_set16im($0000, data_base_offs)
+
+	// Loop through each row, adding the logical row size to the offset each time
+	ldx #$00
+!rowLoop:
+	phx
+
+	// loop through each layer, calling the function to update the buffer for that layer
+	// 
+	ldy BeginLayer
+
+!layerloop:
+	phy
+
+	// Update the scroll position for this row, X = row, Y = layer
+	jsr Layers.UpdateScrollPosition
+
+	lda Layers.RowFuncLo,y
+	sta Tmp+0
+	lda Layers.RowFuncHi,y
+	sta Tmp+1
+	jsr (Tmp)
+
+	ply
+
+	iny
+	cpy EndLayer
+	bne !layerloop-
+
+	plx
+
+	_add16(data_base_offs, LogicalRowSize, data_base_offs)
+
+	inx
+	cpx	NumRows
+	bne !rowLoop-
+
+
+
 	// For each of the layers, call the render function
 	//
 	ldx BeginLayer
@@ -109,9 +159,9 @@ UpdateBuffers:
 	bne !layerloop-
 
 	// Update all of the (horizontal) scroll positions
- 	jsr Layers.UpdateScrollPositions
+ 	// jsr Layers.UpdateScrollPositions
 
-	jsr Layers.UpdateData.InitEOL
+	// jsr Layers.UpdateData.InitEOL
 
 	rts
 }

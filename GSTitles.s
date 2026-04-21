@@ -30,9 +30,9 @@ gsIniTitles:
 	ldx #Layout1.id
 	jsr Layout.SelectLayout
 
-	Layer_SetRenderFunc(Layout1_BG.id, RenderLayout1BG)
-	Layer_SetRenderFunc(Layout1_Pixie.id, Layers.UpdateData.UpdatePixie)
-	Layer_SetRenderFunc(Layout1_EOL.id, RenderNop)
+	Layer_SetRenderFunc(Layout1_BG.id, RenderLayout1BG, RenderNop)
+	Layer_SetRenderFunc(Layout1_Pixie.id, RenderNop, Layers.UpdateData.UpdatePixieRow)
+	Layer_SetRenderFunc(Layout1_EOL.id, RenderNop, RenderNop)
 
 	_set16(Layout.LayoutWidth, Tmp)
 	
