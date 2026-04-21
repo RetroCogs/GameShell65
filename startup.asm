@@ -45,10 +45,10 @@
 .const SCREEN_HEIGHT = 200
 
 .const PLAY_SCREEN_WIDTH = 320
-.const PLAY_SCREEN_HEIGHT = 240
+.const PLAY_SCREEN_HEIGHT = 200
 
 .const CREDITS_SCREEN_WIDTH = 320
-.const CREDITS_SCREEN_HEIGHT = 240
+.const CREDITS_SCREEN_HEIGHT = 200
 
 // Maximum number of Pixie words use per row, 1 pixie is 2+ words (GOTOX + CHAR + [optional CHAR])
 //
