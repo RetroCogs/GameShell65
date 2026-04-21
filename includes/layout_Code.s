@@ -91,6 +91,8 @@ SelectLayout:
 //
 UpdateBuffers:
 {
+	jsr Layers.UpdateData.InitCopyConstants;
+
 	// For each of the layers, call the render function
 	//
 	ldx BeginLayer

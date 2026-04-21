@@ -196,6 +196,28 @@ UpdateData:
 	.var dst_y_size = Tmp7			// 16bit
 	.var src_y_and = Tmp7+2			// 16bit
 
+	InitCopyConstants:
+	{
+		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
+		lda #$00								// always this value, set outside loop!
+		sta tileSourceBank
+		lda #PIXIEANDSCREEN_RAM>>20				// always this value, set outside loop!
+		sta tileDestBank
+		lda #[PIXIEANDSCREEN_RAM >> 16]			// always this value, set outside loop!
+		and #$0f
+		sta tileDest+2
+
+		// Attribs are copied from Bank 0 to (COLOR_RAM>>20)
+		lda #$00								// always this value, set outside loop!	
+		sta attribSourceBank
+		lda #COLOR_RAM>>20						// always this value, set outside loop!	
+		sta attribDestBank
+		lda #[COLOR_RAM >> 16]					// always this value, set outside loop!
+		and #$0f
+		sta attribDest+2		
+		rts
+	}
+
 	UpdatePixie: 
 	{
 		_set32im(PixieWorkTiles, src_tile_ptr)
@@ -454,38 +476,28 @@ UpdateData:
 
 	// Copy a column of tile/attrib data to target buffers
 	// 
-	// inputs:	src_tile_ptr
-	//			src_attrib_ptr
-	//			src_x_offset
-	//			dst_offset
-	//			copy_height
+	// inputs:	src_tile_ptr 	- source tile data pointer (32bit)
+	//			src_attrib_ptr 	- source attrib data pointer (32bit)
+	//			src_x_offset 	- how many chars in from the left edge of the source to copy (16bit)
+	//			src_y_offset 	- how many chars down from the top edge of the source to copy (16bit)
+	//			src_x_size 		- how many bytes wide the source data is (16bit)
+	//			dst_offset 		- destination offset (16bit)
+	//			copy_height 	- number of rows to copy (16bit)
 	//
 	CopyLayerChunks: 
 	{
+		inc $d020
+
 		_set16(copy_width, tileLength)
 		_set16(copy_width, attribLength)
 
 		// Tiles are copied from Bank 0 to (SCREEN_RAM>>20)
-		lda #$00
-		sta tileSourceBank
-		lda #PIXIEANDSCREEN_RAM>>20
-		sta tileDestBank
 		lda src_tile_ptr+2
 		sta tileSource+2
-		lda #[PIXIEANDSCREEN_RAM >> 16]
-		and #$0f
-		sta tileDest+2
 
 		// Attribs are copied from Bank 0 to (COLOR_RAM>>20)
-		lda #$00
-		sta attribSourceBank
-		lda #COLOR_RAM>>20
-		sta attribDestBank
 		lda src_attrib_ptr+2
 		sta attribSource+2
-		lda #[COLOR_RAM >> 16]
-		and #$0f
-		sta attribDest+2
 
 		// DMA tile rows
 		//
@@ -495,6 +507,7 @@ UpdateData:
 
 		RunDMAJobHi(TileJob)
 		
+		// DMA all of the required rows for the tile data
 		ldz #$00
 	!tloop:
 		RunDMAJobLo(TileJob)
@@ -514,6 +527,8 @@ UpdateData:
 
 		RunDMAJobHi(AttribJob)
 
+		// DMA all of the required rows for the attribute data
+		ldz #$00
 		ldz #$00
 	!aloop:
 		RunDMAJobLo(AttribJob)
@@ -525,7 +540,10 @@ UpdateData:
 		cpz copy_height
 		bne !aloop-
 
+		dec $d020
+
 		rts 
+	}
 
 	TileJob:
 		.byte $0A 						// Request format is F018A
@@ -570,7 +588,7 @@ UpdateData:
 		//byte 07
 	attribDest:
 		.byte $00,$00,$00				// Destination & $ffff, [[Destination >> 16] & $0f]
-	}
+
 }
 
 .segment Data "Layer Data"
