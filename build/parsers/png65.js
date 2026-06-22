@@ -1,10 +1,13 @@
 const META_VERSION = 1
 
-const PNG = require('pngjs/browser').PNG;
-const fs = require('fs');
-const path = require('path');
-const yargs = require('yargs/yargs')
-const { hideBin } = require('yargs/helpers')
+import png from 'pngjs/browser.js';
+const { PNG } = png;
+import fs from 'fs';
+import path from 'path';
+import yargsFactory from 'yargs';
+import { hideBin } from 'yargs/helpers';
+
+const yargs = yargsFactory;
 const argv = yargs(hideBin(process.argv))
 		.command('chars', 'Convert an image to chars', () => {}, (argv) => {
     		runCharMapper(argv)
@@ -871,6 +874,7 @@ async function runCharMapper(argv) {
     // console.log(paletteData.pal)
 
     let charData = null
+    let convertedPal = null
     if(argv.fcm) {
         convertedPal = paletteData.pal
         charData = getFCMData(png, charsWidth, charsHeight, paletteData.palette)
@@ -963,6 +967,7 @@ async function runSpriteMapper(argv) {
     let paletteData = getPaletteData(png)
     let charData = null
     let spriteData = null
+    let convertedPal = null
 
     // console.log(paletteData)
 
