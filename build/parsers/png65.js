@@ -3,7 +3,7 @@ const META_VERSION = 1
 const PNG = require('pngjs/browser').PNG;
 const fs = require('fs');
 const path = require('path');
-const yargs = require('yargs/yargs')
+const yargs = require('yargs')
 const { hideBin } = require('yargs/helpers')
 const argv = yargs(hideBin(process.argv))
 		.command('chars', 'Convert an image to chars', () => {}, (argv) => {
