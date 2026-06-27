@@ -1,11 +1,9 @@
-import png from 'pngjs/browser.js';
-const { PNG } = png;
-import fs from 'fs';
-import path from 'path';
-import yargsFactory from 'yargs';
-import { hideBin } from 'yargs/helpers';
+const PNG = require('pngjs/browser').PNG;
 
-const yargs = yargsFactory;
+const fs = require('fs');
+const path = require('path');
+const yargs = require('yargs/yargs')
+const { hideBin } = require('yargs/helpers')
 
 const argv = yargs(hideBin(process.argv))
         .option('workdir', {
